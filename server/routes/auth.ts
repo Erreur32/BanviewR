@@ -8,6 +8,7 @@ import { clearSessionCookie, setSessionCookie } from '../auth/access.ts';
 import { type AttemptKey, clearFailures, lockedUntil, MAX_FAILURES, recordFailure } from '../auth/bruteForce.ts';
 import { hashPassword, verifyPassword } from '../auth/password.ts';
 import { createSession, deleteSession, deleteUserSessions, purgeExpiredSessions } from '../auth/sessions.ts';
+import { usernameIs } from '../db/queries.ts';
 import { users } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { ok } from '../http.ts';
@@ -83,7 +84,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
         throw new AppError('LOCKED', `Too many failed attempts, retry in ${minutes} min`);
       }
 
-      const user = db.select().from(users).where(eq(users.username, username)).get();
+      const user = db.select().from(users).where(usernameIs(username)).get();
       const valid = await verifyPassword(user?.passwordHash, req.body.password);
       if (!user || !valid) {
         for (const [key, max] of keys) recordFailure(db, key, max);

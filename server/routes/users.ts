@@ -8,6 +8,7 @@ import { hashPassword } from '../auth/password.ts';
 import { deleteUserSessions } from '../auth/sessions.ts';
 import { toIso } from '../dates.ts';
 import type { Db } from '../db/index.ts';
+import { revokeTokensCreatedBy, usernameIs } from '../db/queries.ts';
 import { users } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { idParams, ok } from '../http.ts';
@@ -56,7 +57,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (req) => {
       const { username: name, role: newRole } = req.body;
-      if (db.select({ id: users.id }).from(users).where(eq(users.username, name)).get()) {
+      if (db.select({ id: users.id }).from(users).where(usernameIs(name)).get()) {
         throw new AppError('CONFLICT', 'Username already taken');
       }
       const passwordHash = await hashPassword(req.body.password);
@@ -89,7 +90,13 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       const updated = db.update(users).set(changes).where(eq(users.id, user.id)).returning().get();
       // A new password or role must not keep old sessions alive
       deleteUserSessions(db, user.id);
-      audit(req, { action: 'user.update', ok: true, target: user.username, detail: Object.keys(req.body).join(',') });
+      const revoked = newRole === 'viewer' && user.role === 'admin' ? revokeTokensCreatedBy(db, user.id) : 0;
+      audit(req, {
+        action: 'user.update',
+        ok: true,
+        target: user.username,
+        detail: Object.keys(req.body).join(',') + (revoked ? `, ${revoked} token(s) revoked` : ''),
+      });
       return ok({ user: toUserRow(updated) });
     },
   );
@@ -103,8 +110,9 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
         throw new AppError('CONFLICT', 'You cannot delete your own account');
       }
       assertNotLastAdmin(db, user);
+      const revoked = revokeTokensCreatedBy(db, user.id);
       db.delete(users).where(eq(users.id, user.id)).run();
-      audit(req, { action: 'user.delete', ok: true, target: user.username });
+      audit(req, { action: 'user.delete', ok: true, target: user.username, detail: `${revoked} token(s) revoked` });
       return ok();
     },
   );

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An account is locked 15 minutes after 5 failed sign-ins (20 per IP address), also after a restart.
 - API tokens for scripts and AI agents: scopes `read`, `write` or `admin`, optionally limited to some fail2ban instances (not with `admin`, which is global), optional expiry. The secret is shown once.
 - Audit log of sign-ins and changes, with author and IP address.
+- Usernames are case-insensitive: `Admin` and `admin` are the same account.
+- Deleting an admin, or demoting it to viewer, revokes the API tokens it created.
 - Each user picks the time zone used to show dates (default: the browser's).
 
 ### For developers
@@ -26,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New error codes: `CONFLICT`, `UNAUTHORIZED`, `FORBIDDEN`, `INVALID_CREDENTIALS`, `LOCKED`, `RATE_LIMITED`. Routes throw `AppError(code, message)`.
 - `TRUST_PROXY` (default `loopback`): trusted proxies for client IP and protocol. The Vite proxy keeps `Host` and adds `X-Forwarded-For`.
 - `PATCH /api/auth/preferences` (`timezone`: IANA name or `browser`), `users.timezone` (migration `0002_user_timezone`). Dates stay UTC ISO strings in the API, the web app converts them.
-- Tables `api_tokens` and `audit_log` (migration `0001_auth`). 14 auth tests.
+- Tables `api_tokens` and `audit_log` (migration `0001_auth`). Unique index on `lower(username)` (migration `0003_username_nocase`), lookups through `usernameIs()` in `server/db/queries.ts`. 14 auth tests.
 
 - `server/config.ts`: environment validated by zod at startup, clear error and exit on invalid values. New variables `DATA_DIR`, `F2B_SOCKET`, `F2B_DB`.
 - SQLite database `DATA_DIR/banviewr.db` with Drizzle ORM (WAL, foreign keys). Migrations in `server/db/migrations` (`npm run db:generate`), applied at startup.

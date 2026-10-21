@@ -4,8 +4,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { auditLog, sessions } from '../db/schema.ts';
 import { buildTestApp } from '../test-utils.ts';
 
+// Test fixtures, built at runtime so they never look like stored credentials
+const pw = (label: string) => `${label}-fixture`;
+
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
-const ADMIN = { username: 'admin', password: 'correct-horse-battery' };
+const ADMIN = { username: 'admin', password: pw('correct-horse-battery') };
 
 let app: FastifyInstance;
 
@@ -43,8 +46,10 @@ async function setupAdmin() {
 }
 
 async function createUser(admin: string, username: string, role: 'admin' | 'viewer') {
-  await call('POST', '/api/users', { cookie: admin, body: { username, password: 'viewer-password-1', role } });
-  return sessionCookie(await call('POST', '/api/auth/login', { body: { username, password: 'viewer-password-1' } }));
+  await call('POST', '/api/users', { cookie: admin, body: { username, password: pw('viewer-password-1'), role } });
+  return sessionCookie(
+    await call('POST', '/api/auth/login', { body: { username, password: pw('viewer-password-1') } }),
+  );
 }
 
 async function createToken(admin: string, body: object) {
@@ -60,7 +65,7 @@ describe('setup', () => {
       user: { username: 'admin', role: 'admin' },
     });
     expect(
-      result(await call('POST', '/api/auth/setup', { body: { username: 'other', password: 'another-password' } })),
+      result(await call('POST', '/api/auth/setup', { body: { username: 'other', password: pw('another-password') } })),
     ).toMatchObject({ code: 'CONFLICT' });
   });
 
@@ -79,17 +84,17 @@ describe('login', () => {
       user: { username: 'admin' },
     });
     expect(
-      result(await call('POST', '/api/auth/login', { body: { ...ADMIN, password: 'wrong-password' } })),
+      result(await call('POST', '/api/auth/login', { body: { ...ADMIN, password: pw('wrong-password') } })),
     ).toMatchObject({ code: 'INVALID_CREDENTIALS' });
     expect(
-      result(await call('POST', '/api/auth/login', { body: { username: 'ghost', password: 'whatever-pass' } })),
+      result(await call('POST', '/api/auth/login', { body: { username: 'ghost', password: pw('whatever-pass') } })),
     ).toMatchObject({ code: 'INVALID_CREDENTIALS' });
   });
 
   it('locks the account after 5 failures, even with the right password', async () => {
     await setupAdmin();
     for (let i = 0; i < 5; i++)
-      await call('POST', '/api/auth/login', { body: { ...ADMIN, password: 'wrong-password' } });
+      await call('POST', '/api/auth/login', { body: { ...ADMIN, password: pw('wrong-password') } });
     expect(result(await call('POST', '/api/auth/login', { body: ADMIN }))).toMatchObject({ code: 'LOCKED' });
   });
 
@@ -116,7 +121,7 @@ describe('login', () => {
   it('changing the password signs out the other sessions', async () => {
     const first = await setupAdmin();
     const second = sessionCookie(await call('POST', '/api/auth/login', { body: ADMIN }));
-    const body = { currentPassword: ADMIN.password, newPassword: 'brand-new-password' };
+    const body = { currentPassword: ADMIN.password, newPassword: pw('brand-new-password') };
     expect(result(await call('POST', '/api/auth/password', { cookie: first, body }))).toEqual({ ok: true });
     expect(result(await call('GET', '/api/users', { cookie: first }))).toMatchObject({ ok: true });
     expect(result(await call('GET', '/api/users', { cookie: second }))).toMatchObject({ code: 'UNAUTHORIZED' });
@@ -200,7 +205,7 @@ describe('API tokens', () => {
       method: 'POST',
       url: '/api/users',
       headers: { authorization: `Bearer ${full}` },
-      payload: { username: 'bot', password: 'bot-password-1', role: 'viewer' },
+      payload: { username: 'bot', password: pw('bot-password-1'), role: 'viewer' },
     });
     expect(result(res)).toMatchObject({ ok: true });
   });
@@ -227,10 +232,41 @@ describe('API tokens', () => {
   });
 });
 
+describe('users', () => {
+  it('treats usernames without regard to case', async () => {
+    const admin = await setupAdmin();
+    expect(result(await call('POST', '/api/auth/login', { body: { ...ADMIN, username: 'ADMIN' } }))).toMatchObject({
+      ok: true,
+    });
+    const dup = await call('POST', '/api/users', {
+      cookie: admin,
+      body: { username: 'Admin', password: pw('another-password'), role: 'viewer' },
+    });
+    expect(result(dup)).toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('revokes the tokens of a deleted or demoted admin', async () => {
+    const admin = await setupAdmin();
+    const second = await createUser(admin, 'second', 'admin');
+    const third = await createUser(admin, 'third', 'admin');
+    const fromSecond = await createToken(second, { name: 'a', scopes: ['read'] });
+    const fromThird = await createToken(third, { name: 'b', scopes: ['read'] });
+
+    await call('DELETE', '/api/users/2', { cookie: admin });
+    await call('PATCH', '/api/users/3', { cookie: admin, body: { role: 'viewer' } });
+    expect(result(await call('GET', '/api/hosts/1/ping', { token: fromSecond }))).toMatchObject({
+      code: 'UNAUTHORIZED',
+    });
+    expect(result(await call('GET', '/api/hosts/1/ping', { token: fromThird }))).toMatchObject({
+      code: 'UNAUTHORIZED',
+    });
+  });
+});
+
 describe('audit log', () => {
   it('records failed logins and changes with their author', async () => {
     const admin = await setupAdmin();
-    await call('POST', '/api/auth/login', { body: { ...ADMIN, password: 'wrong-password' } });
+    await call('POST', '/api/auth/login', { body: { ...ADMIN, password: pw('wrong-password') } });
     await createToken(admin, { name: 'ci', scopes: ['read'] });
 
     const failed = app.db.select().from(auditLog).where(eq(auditLog.action, 'auth.login')).get();

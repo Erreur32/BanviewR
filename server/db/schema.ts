@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import type { Role, Scope } from '../../shared/auth.ts';
 
 const createdAt = () => integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`);
@@ -17,18 +17,23 @@ export const hosts = sqliteTable('hosts', {
   createdAt: createdAt(),
 });
 
-export const users = sqliteTable('users', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  username: text('username').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  role: text('role', { enum: ['admin', 'viewer'] })
-    .$type<Role>()
-    .notNull(),
-  // IANA time zone used to display dates, 'browser' follows the browser setting
-  timezone: text('timezone').notNull().default('browser'),
-  createdAt: createdAt(),
-  lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
-});
+export const users = sqliteTable(
+  'users',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    username: text('username').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    role: text('role', { enum: ['admin', 'viewer'] })
+      .$type<Role>()
+      .notNull(),
+    // IANA time zone used to display dates, 'browser' follows the browser setting
+    timezone: text('timezone').notNull().default('browser'),
+    createdAt: createdAt(),
+    lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
+  },
+  // 'admin' and 'Admin' are the same account
+  (t) => [uniqueIndex('users_username_nocase').on(sql`lower(${t.username})`)],
+);
 
 // id is the SHA-256 of the cookie token, the token itself is never stored
 export const sessions = sqliteTable('sessions', {
