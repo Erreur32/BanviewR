@@ -1,0 +1,67 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "close": "Fermer"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "preferences": "Préférences",
+    "menu": "Navigation"
+  },
+  "roles": {
+    "admin": "Admin",
+    "viewer": "Lecture seule"
+  },
+  "auth": {
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "passwordConfirm": "Confirmer le mot de passe",
+    "passwordHint": "10 caractères minimum.",
+    "usernameHint": "3 à 32 caractères : lettres, chiffres, point, tiret, tiret bas.",
+    "passwordMismatch": "Les deux mots de passe ne correspondent pas.",
+    "loginTitle": "Connexion",
+    "loginSubmit": "Se connecter",
+    "logout": "Déconnexion",
+    "setupTitle": "Bienvenue dans BanviewR",
+    "setupIntro": "Créez le compte administrateur. Il n'existe aucun mot de passe par défaut : ce compte sera le seul à pouvoir en créer d'autres.",
+    "setupSubmit": "Créer le compte administrateur",
+    "sessionExpired": "Session expirée, reconnectez-vous."
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "server": "Serveur",
+    "connecting": "Connexion au serveur...",
+    "serverOk": "Serveur OK",
+    "serverDown": "Serveur injoignable",
+    "versionUptime": "v{{version}}, démarré depuis {{uptime}}",
+    "instancesSoon": "Les instances fail2ban apparaîtront ici dès la prochaine étape."
+  },
+  "prefs": {
+    "title": "Préférences",
+    "display": "Affichage",
+    "language": "Langue",
+    "timezone": "Fuseau horaire",
+    "timezoneBrowser": "Celui du navigateur ({{zone}})",
+    "timezonePreview": "Heure actuelle dans ce fuseau : {{time}}",
+    "saved": "Préférences enregistrées.",
+    "passwordTitle": "Mot de passe",
+    "passwordIntro": "Changer le mot de passe déconnecte vos autres sessions.",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "passwordSubmit": "Changer le mot de passe",
+    "passwordChanged": "Mot de passe changé, vos autres sessions sont déconnectées."
+  },
+  "errors": {
+    "VALIDATION": "Données invalides.",
+    "BAD_REQUEST": "Requête invalide.",
+    "NOT_FOUND": "Élément introuvable.",
+    "CONFLICT": "Opération impossible dans l'état actuel.",
+    "UNAUTHORIZED": "Vous devez vous connecter.",
+    "FORBIDDEN": "Vous n'avez pas les droits pour cette action.",
+    "INVALID_CREDENTIALS": "Identifiants incorrects.",
+    "LOCKED": "Trop d'échecs : compte bloqué temporairement, réessayez dans 15 minutes.",
+    "RATE_LIMITED": "Trop de requêtes, patientez un peu.",
+    "INTERNAL": "Erreur du serveur, réessayez plus tard."
+  }
+}

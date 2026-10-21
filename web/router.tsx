@@ -1,0 +1,88 @@
+import { QueryCache, QueryClient } from '@tanstack/react-query';
+import { createRootRouteWithContext, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
+import { ApiError } from './api.ts';
+import { authStatusQuery } from './auth.ts';
+import { Toasts } from './components/Toasts.tsx';
+import i18n from './i18n.ts';
+import { AppLayout } from './pages/AppLayout.tsx';
+import { DashboardPage } from './pages/DashboardPage.tsx';
+import { LoginPage } from './pages/LoginPage.tsx';
+import { PreferencesPage } from './pages/PreferencesPage.tsx';
+import { SetupPage } from './pages/SetupPage.tsx';
+import { notify } from './stores/notificationStore.ts';
+
+export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    // A session that expires while the app is open sends the user back to the sign-in page
+    onError: (err) => {
+      if (err instanceof ApiError && err.code === 'UNAUTHORIZED') {
+        notify('info', i18n.t('auth.sessionExpired'));
+        queryClient.clear();
+        router.navigate({ to: '/login' });
+      }
+    },
+  }),
+});
+
+const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  component: () => (
+    <>
+      <Outlet />
+      <Toasts />
+    </>
+  ),
+});
+
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/setup',
+  beforeLoad: async ({ context }) => {
+    const status = await context.queryClient.ensureQueryData(authStatusQuery);
+    if (!status.setupRequired) throw redirect({ to: '/' });
+  },
+  component: SetupPage,
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  beforeLoad: async ({ context }) => {
+    const status = await context.queryClient.ensureQueryData(authStatusQuery);
+    if (status.setupRequired) throw redirect({ to: '/setup' });
+    if (status.user) throw redirect({ to: '/' });
+  },
+  component: LoginPage,
+});
+
+// Every signed-in page lives under this layout
+const appRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'app',
+  beforeLoad: async ({ context }) => {
+    const status = await context.queryClient.ensureQueryData(authStatusQuery);
+    if (status.setupRequired) throw redirect({ to: '/setup' });
+    if (!status.user) throw redirect({ to: '/login' });
+  },
+  component: AppLayout,
+});
+
+const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage });
+const preferencesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/preferences',
+  component: PreferencesPage,
+});
+
+const routeTree = rootRoute.addChildren([
+  setupRoute,
+  loginRoute,
+  appRoute.addChildren([dashboardRoute, preferencesRoute]),
+]);
+
+export const router = createRouter({ routeTree, context: { queryClient } });
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "close": "Close"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "preferences": "Preferences",
+    "menu": "Navigation"
+  },
+  "roles": {
+    "admin": "Admin",
+    "viewer": "Read only"
+  },
+  "auth": {
+    "username": "Username",
+    "password": "Password",
+    "passwordConfirm": "Confirm password",
+    "passwordHint": "At least 10 characters.",
+    "usernameHint": "3 to 32 characters: letters, digits, dot, dash, underscore.",
+    "passwordMismatch": "The two passwords do not match.",
+    "loginTitle": "Sign in",
+    "loginSubmit": "Sign in",
+    "logout": "Sign out",
+    "setupTitle": "Welcome to BanviewR",
+    "setupIntro": "Create the administrator account. There is no default password: this account will be the only one able to create others.",
+    "setupSubmit": "Create the administrator account",
+    "sessionExpired": "Session expired, please sign in again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "server": "Server",
+    "connecting": "Connecting to the server...",
+    "serverOk": "Server OK",
+    "serverDown": "Server unreachable",
+    "versionUptime": "v{{version}}, up for {{uptime}}",
+    "instancesSoon": "fail2ban instances will show up here in the next step."
+  },
+  "prefs": {
+    "title": "Preferences",
+    "display": "Display",
+    "language": "Language",
+    "timezone": "Time zone",
+    "timezoneBrowser": "Browser time zone ({{zone}})",
+    "timezonePreview": "Current time in this zone: {{time}}",
+    "saved": "Preferences saved.",
+    "passwordTitle": "Password",
+    "passwordIntro": "Changing your password signs out your other sessions.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "passwordSubmit": "Change password",
+    "passwordChanged": "Password changed, your other sessions are signed out."
+  },
+  "errors": {
+    "VALIDATION": "Invalid data.",
+    "BAD_REQUEST": "Invalid request.",
+    "NOT_FOUND": "Not found.",
+    "CONFLICT": "Not possible in the current state.",
+    "UNAUTHORIZED": "You need to sign in.",
+    "FORBIDDEN": "You are not allowed to do this.",
+    "INVALID_CREDENTIALS": "Wrong username or password.",
+    "LOCKED": "Too many failures: account temporarily locked, retry in 15 minutes.",
+    "RATE_LIMITED": "Too many requests, please wait a moment.",
+    "INTERNAL": "Server error, please retry later."
+  }
+}

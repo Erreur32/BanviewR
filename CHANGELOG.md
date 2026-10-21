@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usernames are case-insensitive: `Admin` and `admin` are the same account.
 - Deleting an admin, or demoting it to viewer, revokes the API tokens it created.
 - Each user picks the time zone used to show dates (default: the browser's).
+- Web app: first admin setup page, sign-in page, app layout with sidebar (stacked on phones), user name, role and sign-out in the header.
+- Preferences page: language (French or English), time zone with a live preview, password change.
+- Notifications (toasts) for saved changes; an expired session sends you back to the sign-in page with a message.
 
 ### For developers
 
@@ -27,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@fastify/helmet` security headers, `@fastify/rate-limit` (300/min per IP, 10/min on auth routes).
 - New error codes: `CONFLICT`, `UNAUTHORIZED`, `FORBIDDEN`, `INVALID_CREDENTIALS`, `LOCKED`, `RATE_LIMITED`. Routes throw `AppError(code, message)`.
 - `TRUST_PROXY` (default `loopback`): trusted proxies for client IP and protocol. The Vite proxy keeps `Host` and adds `X-Forwarded-For`.
+- Web: TanStack Router (`web/router.tsx`, guards on `setup`, `login` and the signed-in layout), `api` client throwing `ApiError` with the code, `errorText()` translating error codes, `useCurrentUser()`/`useSignedIn()` in `web/auth.ts`.
+- Web: i18next with `web/locales/{fr,en}.json` (French default and fallback, choice kept in the browser), test that both files have the same keys.
+- Web: `formatDateTime(iso, timezone, lang)` in `web/dates.ts` for every date shown, Zustand `notificationStore` with `notify()` usable outside React, shared form components in `web/components/ui.tsx`.
 - `PATCH /api/auth/preferences` (`timezone`: IANA name or `browser`), `users.timezone` (migration `0002_user_timezone`). Dates stay UTC ISO strings in the API, the web app converts them.
 - Tables `api_tokens` and `audit_log` (migration `0001_auth`). Unique index on `lower(username)` (migration `0003_username_nocase`), lookups through `usernameIs()` in `server/db/queries.ts`. 14 auth tests.
 
