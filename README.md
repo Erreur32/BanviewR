@@ -14,6 +14,20 @@
 
 ---
 
+## Philosophy
+
+BanviewR drives the firewall of the machines it manages. Every design choice follows from that.
+- **Safe by default.** The server listens on loopback only, there is no default password, passwords are hashed with argon2id, and sessions and API tokens are stored as hashes only. A route that does not declare its access level is admin only: forgetting fails closed, not open.
+- **Least privilege.** `viewer` accounts and `read` tokens can look but never change anything, whether from the UI, the API or MCP. A token can be limited to some fail2ban instances.
+- **The host's fail2ban comes first.** When fail2ban is already installed on a machine, BanviewR drives it and never starts its own. The embedded fail2ban is only offered where none exists, and the two never run at the same time.
+- **One API for everyone.** The web UI, scripts and AI agents (MCP) use the same API, with the same permissions and the same audit log. Nothing is UI only.
+- **Multi-instance from day one.** Every piece of data belongs to a fail2ban instance, even when there is only one, so several instances per machine and several machines need no rewrite.
+- **Traceable.** Every change (ban, unban, jail, user, token) is written to an audit log: who, what, on which instance, when, from which IP, and whether it worked.
+- **Explicit errors.** Every response has the same shape, errors carry a stable code (`VALIDATION`, `FORBIDDEN`, `LOCKED`...) and never leak internal details.
+- **Typed end to end.** Each route declares one schema, shared by the server and the web app. Invalid input is rejected at the edge.
+- **Light and self-contained.** One container, SQLite, no external database, no chart library: graphs are hand-written SVG.
+- **Bilingual.** English and French UI.
+
 ## Status
 
 Early bootstrap. The dev stack runs, the fail2ban features are not ported yet.
@@ -62,14 +76,15 @@ npm run dev
 
 The web dev server proxies `/api` to the server, so only port 5185 needs to be reachable.
 
-| Variable     | Default                              | Use                                           |
-| ------------ | ------------------------------------ | --------------------------------------------- |
-| `PORT`       | `3025`                               | Server port                                   |
-| `HOST`       | `127.0.0.1`                          | Server bind address                           |
-| `VITE_PORT`  | `5185`                               | Web dev server port                           |
-| `DATA_DIR`   | `./data`                             | SQLite database (`banviewr.db`)               |
-| `F2B_SOCKET` | `/var/run/fail2ban/fail2ban.sock`    | Local fail2ban socket, seeds the first host   |
-| `F2B_DB`     | `/var/lib/fail2ban/fail2ban.sqlite3` | Local fail2ban database, seeds the first host |
+| Variable      | Default                              | Use                                                            |
+| ------------- | ------------------------------------ | -------------------------------------------------------------- |
+| `PORT`        | `3025`                               | Server port                                                    |
+| `HOST`        | `127.0.0.1`                          | Server bind address                                            |
+| `VITE_PORT`   | `5185`                               | Web dev server port                                            |
+| `TRUST_PROXY` | `loopback`                           | Proxies trusted for `X-Forwarded-*` headers (client IP, HTTPS) |
+| `DATA_DIR`    | `./data`                             | SQLite database (`banviewr.db`)                                |
+| `F2B_SOCKET`  | `/var/run/fail2ban/fail2ban.sock`    | Local fail2ban socket, seeds the first host                    |
+| `F2B_DB`      | `/var/lib/fail2ban/fail2ban.sqlite3` | Local fail2ban database, seeds the first host                  |
 
 Other commands:
 
@@ -79,6 +94,16 @@ npm run lint       # Biome lint + format check
 npm run db:generate  # Create a migration after editing server/db/schema.ts
 npx tsc            # Type check
 ```
+
+## API access
+
+The web UI uses a session cookie. Scripts and AI agents use an API token created by an admin in the UI:
+
+```bash
+curl -H "Authorization: Bearer bvr_..." http://127.0.0.1:3025/api/auth/status
+```
+
+Tokens carry scopes (`read`, `write`, `admin`) and can be limited to some fail2ban instances.
 
 ## Security note
 

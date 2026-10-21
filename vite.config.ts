@@ -14,7 +14,8 @@ export default defineConfig({
     // All interfaces, so the dev UI is reachable from the LAN
     host: '0.0.0.0',
     proxy: {
-      '/api': { target: `http://127.0.0.1:${serverPort}`, changeOrigin: true },
+      // Host is kept and X-Forwarded-For added: the server checks Origin against Host and logs the real client IP
+      '/api': { target: `http://127.0.0.1:${serverPort}`, xfwd: true },
     },
   },
   build: { outDir: '../dist', emptyOutDir: true },

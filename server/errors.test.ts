@@ -3,11 +3,14 @@ import { z } from 'zod';
 import { apiResponse } from '../shared/api.ts';
 import { buildTestApp } from './test-utils.ts';
 
+const SAME_ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
+
 async function appWithTestRoutes() {
   const app = await buildTestApp();
   app.post(
     '/api/test/echo',
     {
+      config: { access: 'public' },
       schema: {
         body: z.object({ name: z.string().min(2) }),
         response: { 200: apiResponse(z.object({ name: z.string() })) },
@@ -15,7 +18,7 @@ async function appWithTestRoutes() {
     },
     async (req) => ({ success: true as const, result: req.body as { name: string } }),
   );
-  app.get('/api/test/boom', async () => {
+  app.get('/api/test/boom', { config: { access: 'public' } }, async () => {
     throw new Error('secret detail');
   });
   return app;
@@ -24,7 +27,12 @@ async function appWithTestRoutes() {
 describe('error handling', () => {
   it('wraps schema validation errors', async () => {
     const app = await appWithTestRoutes();
-    const res = await app.inject({ method: 'POST', url: '/api/test/echo', payload: { name: 'x' } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/test/echo',
+      headers: SAME_ORIGIN,
+      payload: { name: 'x' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ success: true, result: { ok: false, code: 'VALIDATION' } });
     await app.close();
@@ -35,7 +43,7 @@ describe('error handling', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/test/echo',
-      headers: { 'content-type': 'application/json' },
+      headers: { ...SAME_ORIGIN, 'content-type': 'application/json' },
       payload: '{nope',
     });
     expect(res.json()).toMatchObject({ success: true, result: { ok: false, code: 'BAD_REQUEST' } });

@@ -86,6 +86,11 @@ config/*.conf
 *.pwd
 *.passwd
 *.password
+# Source files are code, not secrets, whatever their name (apiTokens.ts, tokens.ts...)
+!server/**/*.ts
+!shared/**/*.ts
+!web/**/*.ts
+!web/**/*.tsx
 
 # Private dev folders
 docs/superpowers/
@@ -111,3 +116,4 @@ Thumbs.db
 # Dev-only design notes (French)
 IDEE.md
 PLAN.md
+CAHIER_DES_CHARGES.md

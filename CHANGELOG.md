@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### For users
+
+- Accounts: the first admin is created on first start (no default password), then sign-in with a session cookie valid 7 days, extended while in use.
+- Roles: `admin` can change things, `viewer` can only read.
+- An account is locked 15 minutes after 5 failed sign-ins (20 per IP address), also after a restart.
+- API tokens for scripts and AI agents: scopes `read`, `write` or `admin`, optionally limited to some fail2ban instances (not with `admin`, which is global), optional expiry. The secret is shown once.
+- Audit log of sign-ins and changes, with author and IP address.
+- Each user picks the time zone used to show dates (default: the browser's).
+
 ### For developers
+
+- Auth API: `GET /api/auth/status`, `POST /api/auth/setup`, `/login`, `/logout`, `/password`; `GET/POST /api/users`, `PATCH/DELETE /api/users/:id`; `GET/POST /api/tokens`, `POST /api/tokens/:id/revoke`, `DELETE /api/tokens/:id`; `GET /api/audit` (keyset pagination with `before`).
+- Access control in one `onRequest` hook (`server/auth/access.ts`): each route declares `config.access` (`public`, `read`, `write`, `admin`), missing means `admin`. `sessionOnly` refuses API tokens. A `:hostId` route parameter is checked against the token's allowed instances.
+- Sessions and API tokens stored as SHA-256 hashes only, passwords hashed with argon2id (`@node-rs/argon2`).
+- CSRF: `SameSite=Strict` cookie plus an `Origin` check against `Host`/`X-Forwarded-Host` on every non-GET request without a Bearer token (login and setup included). Signing in replaces the session presented with the request.
+- `@fastify/helmet` security headers, `@fastify/rate-limit` (300/min per IP, 10/min on auth routes).
+- New error codes: `CONFLICT`, `UNAUTHORIZED`, `FORBIDDEN`, `INVALID_CREDENTIALS`, `LOCKED`, `RATE_LIMITED`. Routes throw `AppError(code, message)`.
+- `TRUST_PROXY` (default `loopback`): trusted proxies for client IP and protocol. The Vite proxy keeps `Host` and adds `X-Forwarded-For`.
+- `PATCH /api/auth/preferences` (`timezone`: IANA name or `browser`), `users.timezone` (migration `0002_user_timezone`). Dates stay UTC ISO strings in the API, the web app converts them.
+- Tables `api_tokens` and `audit_log` (migration `0001_auth`). 14 auth tests.
 
 - `server/config.ts`: environment validated by zod at startup, clear error and exit on invalid values. New variables `DATA_DIR`, `F2B_SOCKET`, `F2B_DB`.
 - SQLite database `DATA_DIR/banviewr.db` with Drizzle ORM (WAL, foreign keys). Migrations in `server/db/migrations` (`npm run db:generate`), applied at startup.

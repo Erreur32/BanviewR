@@ -6,6 +6,7 @@ import { openDb } from './db/index.ts';
 const db = openDb(join(config.dataDir, 'banviewr.db'), { socketPath: config.f2bSocket, dbPath: config.f2bDb });
 
 const app = await buildApp(db, {
+  trustProxy: config.trustProxy,
   logger: config.isDev
     ? { transport: { target: 'pino-pretty', options: { translateTime: 'SYS:HH:MM:ss', ignore: 'pid,hostname' } } }
     : true,
