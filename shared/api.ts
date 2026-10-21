@@ -6,6 +6,17 @@ export const apiResponse = <T extends z.ZodType>(result: T) => z.object({ succes
 
 export type ApiResponse<T> = { success: true; result: T };
 
+// Stable codes the web app can map to translated messages
+export const apiErrorCode = z.enum(['VALIDATION', 'BAD_REQUEST', 'NOT_FOUND', 'INTERNAL']);
+export type ApiErrorCode = z.infer<typeof apiErrorCode>;
+
+export const apiErrorResult = z.object({
+  ok: z.literal(false),
+  code: apiErrorCode,
+  error: z.string(),
+});
+export type ApiErrorResult = z.infer<typeof apiErrorResult>;
+
 export const healthResult = z.object({
   ok: z.boolean(),
   version: z.string(),

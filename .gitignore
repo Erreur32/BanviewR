@@ -62,6 +62,7 @@ data-test/
 # Environment variables (sensitive)
 .env
 .env.*
+!.env.example
 
 # Configuration files (sensitive)
 config/banviewr.conf
