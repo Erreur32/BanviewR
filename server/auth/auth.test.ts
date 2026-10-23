@@ -2,10 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { auditLog, sessions } from '../db/schema.ts';
-import { buildTestApp } from '../test-utils.ts';
-
-// Test fixtures, built at runtime so they never look like stored credentials
-const pw = (label: string) => `${label}-fixture`;
+import { buildTestApp, pw } from '../test-utils.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
 const ADMIN = { username: 'admin', password: pw('correct-horse-battery') };

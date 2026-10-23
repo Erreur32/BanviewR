@@ -5,6 +5,9 @@ import { authStatusQuery } from './auth.ts';
 import { Toasts } from './components/Toasts.tsx';
 import i18n from './i18n.ts';
 import { AppLayout } from './pages/AppLayout.tsx';
+import { AuditPage } from './pages/admin/AuditPage.tsx';
+import { TokensPage } from './pages/admin/TokensPage.tsx';
+import { UsersPage } from './pages/admin/UsersPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { PreferencesPage } from './pages/PreferencesPage.tsx';
@@ -73,10 +76,27 @@ const preferencesRoute = createRoute({
   component: PreferencesPage,
 });
 
+// Admin pages, the server enforces the same rule on every admin route
+const adminRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/admin',
+  beforeLoad: async ({ context }) => {
+    const status = await context.queryClient.ensureQueryData(authStatusQuery);
+    if (status.user?.role !== 'admin') throw redirect({ to: '/' });
+  },
+});
+const usersRoute = createRoute({ getParentRoute: () => adminRoute, path: '/users', component: UsersPage });
+const tokensRoute = createRoute({ getParentRoute: () => adminRoute, path: '/tokens', component: TokensPage });
+const auditRoute = createRoute({ getParentRoute: () => adminRoute, path: '/audit', component: AuditPage });
+
 const routeTree = rootRoute.addChildren([
   setupRoute,
   loginRoute,
-  appRoute.addChildren([dashboardRoute, preferencesRoute]),
+  appRoute.addChildren([
+    dashboardRoute,
+    preferencesRoute,
+    adminRoute.addChildren([usersRoute, tokensRoute, auditRoute]),
+  ]),
 ]);
 
 export const router = createRouter({ routeTree, context: { queryClient } });

@@ -10,3 +10,6 @@ export function openTestDb() {
 export function buildTestApp() {
   return buildApp(openTestDb());
 }
+
+// Test password fixtures, built at runtime so they never look like stored credentials
+export const pw = (label: string) => `${label}-fixture`;

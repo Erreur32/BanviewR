@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 export function Card({ title, children }: { title?: ReactNode; children: ReactNode }) {
   return (
@@ -10,13 +10,98 @@ export function Card({ title, children }: { title?: ReactNode; children: ReactNo
   );
 }
 
-export function Button({ className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+const BUTTON_VARIANTS = {
+  primary: 'border-ok/40 bg-ok/15 hover:bg-ok/25',
+  secondary: 'border-border bg-bg2 hover:bg-border',
+  danger: 'border-danger/40 bg-danger/10 text-danger hover:bg-danger/20',
+};
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: keyof typeof BUTTON_VARIANTS;
+  size?: 'md' | 'sm';
+};
+
+export function Button({ className = '', variant = 'primary', size = 'md', ...props }: ButtonProps) {
+  const sizeClass = size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-4 py-2 text-sm';
   return (
     <button
       type="button"
-      className={`rounded-md border border-ok/40 bg-ok/15 px-4 py-2 text-sm font-medium text-text hover:bg-ok/25 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`rounded-md border font-medium text-text disabled:cursor-not-allowed disabled:opacity-50 ${sizeClass} ${BUTTON_VARIANTS[variant]} ${className}`}
       {...props}
     />
+  );
+}
+
+// Destructive action in two clicks: the first one arms the button for a few seconds
+export function ConfirmButton({
+  confirmLabel,
+  onConfirm,
+  children,
+  ...props
+}: Omit<ButtonProps, 'onClick'> & { confirmLabel: string; onConfirm: () => void }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 4000);
+    return () => clearTimeout(timer);
+  }, [armed]);
+  return (
+    <Button
+      variant="danger"
+      {...props}
+      onClick={() => {
+        if (!armed) return setArmed(true);
+        setArmed(false);
+        onConfirm();
+      }}
+    >
+      {armed ? confirmLabel : children}
+    </Button>
+  );
+}
+
+const BADGE_TONES = {
+  neutral: 'border-border text-muted',
+  ok: 'border-ok/50 text-ok',
+  danger: 'border-danger/50 text-danger',
+  accent: 'border-accent/50 text-accent',
+};
+
+export function Badge({ tone = 'neutral', children }: { tone?: keyof typeof BADGE_TONES; children: ReactNode }) {
+  return (
+    <span className={`inline-block whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${BADGE_TONES[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+// Horizontal scroll on small screens, header cells from `columns`
+export function Table({ columns, children }: { columns: ReactNode[]; children: ReactNode }) {
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-bg1 text-xs text-muted">
+          <tr>
+            {columns.map((col, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: static header list
+              <th key={i} className="whitespace-nowrap px-3 py-2 font-medium">
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border [&_td]:px-3 [&_td]:py-2">{children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+export function CheckboxField({ label, ...props }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label className="flex items-center gap-2 text-sm">
+      <input type="checkbox" className="accent-accent" {...props} />
+      {label}
+    </label>
   );
 }
 

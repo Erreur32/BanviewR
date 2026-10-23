@@ -5,6 +5,7 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 import { registerAccessControl } from './auth/access.ts';
 import type { Db } from './db/index.ts';
 import { registerErrorHandling } from './errors.ts';
+import { registerOpenApi } from './openapi.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
 import { healthRoutes } from './routes/health.ts';
@@ -29,6 +30,7 @@ export async function buildApp(db: Db, opts: FastifyServerOptions = {}) {
   // Per IP, auth routes set a stricter limit
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   await registerAccessControl(app);
+  await registerOpenApi(app);
 
   await app.register(
     async (api) => {

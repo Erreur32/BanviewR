@@ -2,12 +2,20 @@
   "common": {
     "loading": "Chargement...",
     "save": "Enregistrer",
-    "close": "Fermer"
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "confirm": "Confirmer ?",
+    "refresh": "Actualiser"
   },
   "nav": {
     "dashboard": "Tableau de bord",
     "preferences": "Préférences",
-    "menu": "Navigation"
+    "menu": "Navigation",
+    "users": "Utilisateurs",
+    "tokens": "Jetons d'API",
+    "audit": "Journal d'audit",
+    "apiDocs": "Documentation API"
   },
   "roles": {
     "admin": "Admin",
@@ -51,6 +59,85 @@
     "newPassword": "Nouveau mot de passe",
     "passwordSubmit": "Changer le mot de passe",
     "passwordChanged": "Mot de passe changé, vos autres sessions sont déconnectées."
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "intro": "Les admins pilotent fail2ban et gèrent l'application, les comptes en lecture seule consultent uniquement.",
+    "role": "Rôle",
+    "createdAt": "Créé le",
+    "lastLogin": "Dernière connexion",
+    "never": "Jamais",
+    "you": "vous",
+    "createTitle": "Nouvel utilisateur",
+    "createSubmit": "Créer l'utilisateur",
+    "created": "Utilisateur {{username}} créé.",
+    "roleChanged": "Rôle de {{username}} modifié, ses sessions sont déconnectées.",
+    "deleted": "Utilisateur {{username}} supprimé.",
+    "resetPassword": "Nouveau mot de passe",
+    "newPasswordFor": "Nouveau mot de passe pour {{username}}",
+    "passwordResetHint": "10 caractères minimum. Ses sessions ouvertes seront déconnectées.",
+    "passwordReset": "Mot de passe de {{username}} changé."
+  },
+  "tokens": {
+    "title": "Jetons d'API",
+    "intro": "Pour les scripts et le serveur MCP. Un jeton ne gère ni les utilisateurs ni les autres jetons : ces pages exigent une session.",
+    "createTitle": "Nouveau jeton",
+    "createSubmit": "Créer le jeton",
+    "name": "Nom",
+    "nameHint": "Pour vous y retrouver, par exemple « script de sauvegarde ».",
+    "expiresInDays": "Expire dans (jours)",
+    "expiresHint": "Laisser vide pour un jeton sans expiration (déconseillé).",
+    "scopes": "Portées",
+    "scopesHint": "admin inclut write, write inclut read.",
+    "scope": {
+      "read": "read (lecture)",
+      "write": "write (actions fail2ban)",
+      "admin": "admin (tout)"
+    },
+    "instancesHint": "Le jeton donne accès à toutes les instances. La restriction par instance arrivera avec la gestion des instances.",
+    "instances": "Instances",
+    "allInstances": "Toutes",
+    "statusLabel": "État",
+    "status": {
+      "active": "Actif",
+      "expired": "Expiré",
+      "revoked": "Révoqué"
+    },
+    "expiresAt": "Expire le",
+    "noExpiry": "Jamais",
+    "lastUsed": "Dernière utilisation",
+    "revoke": "Révoquer",
+    "revoked": "Jeton {{name}} révoqué.",
+    "deleted": "Jeton {{name}} supprimé.",
+    "empty": "Aucun jeton pour le moment.",
+    "secretTitle": "Jeton « {{name}} » créé",
+    "secretWarning": "Copiez-le maintenant : il ne sera plus jamais affiché. Seule son empreinte est conservée.",
+    "secret": "Jeton",
+    "copy": "Copier",
+    "copied": "Jeton copié.",
+    "usage": "À envoyer dans l'en-tête",
+    "secretSaved": "C'est noté, masquer"
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "intro": "Toutes les modifications et connexions, les plus récentes en premier.",
+    "at": "Date",
+    "actor": "Auteur",
+    "action": "Action",
+    "target": "Cible",
+    "result": "Résultat",
+    "detail": "Détail",
+    "instance": "Instance",
+    "ip": "IP",
+    "actorType": {
+      "user": "utilisateur",
+      "token": "jeton",
+      "system": "système"
+    },
+    "ok": "OK",
+    "failed": "Échec",
+    "empty": "Aucune entrée.",
+    "loadMore": "Charger plus"
   },
   "errors": {
     "VALIDATION": "Données invalides.",

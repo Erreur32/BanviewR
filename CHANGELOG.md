@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web app: first admin setup page, sign-in page, app layout with sidebar (stacked on phones), user name, role and sign-out in the header.
 - Preferences page: language (French or English), time zone with a live preview, password change.
 - Notifications (toasts) for saved changes; an expired session sends you back to the sign-in page with a message.
+- Admin pages: users (create, change role, reset password, delete), API tokens (create with scopes and expiry, secret shown once with a copy button, revoke, then delete), audit log (most recent first, load more).
+- Interactive API documentation at `/api/docs/` (Swagger UI), linked from the sidebar, for signed-in users and `read` tokens.
 
 ### For developers
 
@@ -27,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Access control in one `onRequest` hook (`server/auth/access.ts`): each route declares `config.access` (`public`, `read`, `write`, `admin`), missing means `admin`. `sessionOnly` refuses API tokens. A `:hostId` route parameter is checked against the token's allowed instances.
 - Sessions and API tokens stored as SHA-256 hashes only, passwords hashed with argon2id (`@node-rs/argon2`).
 - CSRF: `SameSite=Strict` cookie plus an `Origin` check against `Host`/`X-Forwarded-Host` on every non-GET request without a Bearer token (login and setup included). Signing in replaces the session presented with the request.
+- OpenAPI 3 document generated from the zod route schemas (`@fastify/swagger`), at `GET /api/docs/json`. Each operation lists its tag, `security` (Bearer and/or session cookie) and `x-access` level.
+- Web: `Button` variants, `ConfirmButton` (two-click destructive actions), `Badge`, `Table`, `CheckboxField` in `web/components/ui.tsx`; `useFormatDateTime()` in `web/auth.ts`.
 - `@fastify/helmet` security headers, `@fastify/rate-limit` (300/min per IP, 10/min on auth routes).
 - New error codes: `CONFLICT`, `UNAUTHORIZED`, `FORBIDDEN`, `INVALID_CREDENTIALS`, `LOCKED`, `RATE_LIMITED`. Routes throw `AppError(code, message)`.
 - `TRUST_PROXY` (default `loopback`): trusted proxies for client IP and protocol. The Vite proxy keeps `Host` and adds `X-Forwarded-For`.

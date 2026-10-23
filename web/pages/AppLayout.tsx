@@ -9,6 +9,14 @@ const NAV = [
   { to: '/preferences', label: 'nav.preferences' },
 ] as const;
 
+const ADMIN_NAV = [
+  { to: '/admin/users', label: 'nav.users' },
+  { to: '/admin/tokens', label: 'nav.tokens' },
+  { to: '/admin/audit', label: 'nav.audit' },
+] as const;
+
+const navLinkClass = 'whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted hover:bg-bg2 hover:text-text';
+
 export function AppLayout() {
   const { t } = useTranslation();
   const user = useCurrentUser();
@@ -30,17 +38,21 @@ export function AppLayout() {
           Ban<span className="text-danger">view</span>R
         </p>
         <nav aria-label={t('nav.menu')} className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col">
-          {NAV.map((item) => (
+          {[...NAV, ...(user.role === 'admin' ? ADMIN_NAV : [])].map((item) => (
             <Link
               key={item.to}
               to={item.to}
               activeOptions={{ exact: true }}
-              className="whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted hover:bg-bg2 hover:text-text"
+              className={navLinkClass}
               activeProps={{ className: 'bg-bg2 text-text' }}
             >
               {t(item.label)}
             </Link>
           ))}
+          {/* Served by the API server, outside the SPA router */}
+          <a href="/api/docs/" target="_blank" rel="noreferrer" className={navLinkClass}>
+            {t('nav.apiDocs')}
+          </a>
         </nav>
       </aside>
 

@@ -2,12 +2,20 @@
   "common": {
     "loading": "Loading...",
     "save": "Save",
-    "close": "Close"
+    "close": "Close",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm?",
+    "refresh": "Refresh"
   },
   "nav": {
     "dashboard": "Dashboard",
     "preferences": "Preferences",
-    "menu": "Navigation"
+    "menu": "Navigation",
+    "users": "Users",
+    "tokens": "API tokens",
+    "audit": "Audit log",
+    "apiDocs": "API documentation"
   },
   "roles": {
     "admin": "Admin",
@@ -51,6 +59,85 @@
     "newPassword": "New password",
     "passwordSubmit": "Change password",
     "passwordChanged": "Password changed, your other sessions are signed out."
+  },
+  "users": {
+    "title": "Users",
+    "intro": "Admins drive fail2ban and manage the app, read-only accounts can only look.",
+    "role": "Role",
+    "createdAt": "Created",
+    "lastLogin": "Last sign-in",
+    "never": "Never",
+    "you": "you",
+    "createTitle": "New user",
+    "createSubmit": "Create user",
+    "created": "User {{username}} created.",
+    "roleChanged": "Role of {{username}} changed, their sessions are signed out.",
+    "deleted": "User {{username}} deleted.",
+    "resetPassword": "New password",
+    "newPasswordFor": "New password for {{username}}",
+    "passwordResetHint": "At least 10 characters. Their open sessions will be signed out.",
+    "passwordReset": "Password of {{username}} changed."
+  },
+  "tokens": {
+    "title": "API tokens",
+    "intro": "For scripts and the MCP server. A token cannot manage users or other tokens: these pages need a session.",
+    "createTitle": "New token",
+    "createSubmit": "Create token",
+    "name": "Name",
+    "nameHint": "To recognize it later, for example \"backup script\".",
+    "expiresInDays": "Expires in (days)",
+    "expiresHint": "Leave empty for a token that never expires (not recommended).",
+    "scopes": "Scopes",
+    "scopesHint": "admin includes write, write includes read.",
+    "scope": {
+      "read": "read",
+      "write": "write (fail2ban actions)",
+      "admin": "admin (everything)"
+    },
+    "instancesHint": "The token can reach every instance. Per-instance restriction comes with instance management.",
+    "instances": "Instances",
+    "allInstances": "All",
+    "statusLabel": "Status",
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "revoked": "Revoked"
+    },
+    "expiresAt": "Expires",
+    "noExpiry": "Never",
+    "lastUsed": "Last used",
+    "revoke": "Revoke",
+    "revoked": "Token {{name}} revoked.",
+    "deleted": "Token {{name}} deleted.",
+    "empty": "No token yet.",
+    "secretTitle": "Token \"{{name}}\" created",
+    "secretWarning": "Copy it now: it will never be shown again. Only its hash is stored.",
+    "secret": "Token",
+    "copy": "Copy",
+    "copied": "Token copied.",
+    "usage": "Send it in the header",
+    "secretSaved": "Got it, hide"
+  },
+  "audit": {
+    "title": "Audit log",
+    "intro": "Every change and sign-in, most recent first.",
+    "at": "Date",
+    "actor": "Actor",
+    "action": "Action",
+    "target": "Target",
+    "result": "Result",
+    "detail": "Detail",
+    "instance": "Instance",
+    "ip": "IP",
+    "actorType": {
+      "user": "user",
+      "token": "token",
+      "system": "system"
+    },
+    "ok": "OK",
+    "failed": "Failed",
+    "empty": "No entry.",
+    "loadMore": "Load more"
   },
   "errors": {
     "VALIDATION": "Invalid data.",
