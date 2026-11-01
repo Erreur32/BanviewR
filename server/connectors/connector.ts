@@ -1,4 +1,4 @@
-import type { BanRow, BanStats, JailAction, JailStatus } from '../../shared/fail2ban.ts';
+import type { BanRow, BanStats, JailAction, JailConfig, JailStatus } from '../../shared/fail2ban.ts';
 import type { HostStatus } from '../../shared/hosts.ts';
 import type { hosts } from '../db/schema.ts';
 
@@ -8,6 +8,7 @@ export interface Fail2banConnector {
   status(): Promise<HostStatus>;
   listJails(): Promise<JailStatus[]>;
   jail(name: string): Promise<JailStatus>;
+  jailConfigs(): Promise<JailConfig[]>;
   ban(jail: string, target: string): Promise<void>;
   unban(jail: string, target: string): Promise<void>;
   jailAction(jail: string, action: JailAction): Promise<void>;

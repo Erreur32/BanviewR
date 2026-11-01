@@ -30,6 +30,7 @@ export const hostRoutes: FastifyPluginAsyncZod = async (app) => {
     mode: host.mode,
     socketPath: host.socketPath,
     dbPath: host.dbPath,
+    confPath: host.confPath,
     createdAt: host.createdAt.toISOString(),
     status: await app.connect(host).status(),
   });

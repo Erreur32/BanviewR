@@ -28,6 +28,21 @@ export const jailStatus = z.object({
 });
 export type JailStatus = z.infer<typeof jailStatus>;
 
+export const jailConfig = z.object({
+  name: z.string(),
+  enabled: z.boolean(),
+  filter: z.string().nullable(),
+  // Seconds, -1 means permanent, null when not set or not readable
+  bantime: z.number().nullable(),
+  findtime: z.number().nullable(),
+  maxretry: z.number().nullable(),
+});
+export type JailConfig = z.infer<typeof jailConfig>;
+
+// A jail fail2ban runs, or a stopped one found in the config
+export const jailRow = jailStatus.extend({ running: z.boolean(), config: jailConfig.nullable() });
+export type JailRow = z.infer<typeof jailRow>;
+
 export const banRow = z.object({
   ip: z.string(),
   jail: z.string(),

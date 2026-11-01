@@ -13,6 +13,7 @@ const envSchema = z.object({
   // Seed values for the local host, editable later from the UI
   F2B_SOCKET: z.string().min(1).default('/var/run/fail2ban/fail2ban.sock'),
   F2B_DB: z.string().min(1).default('/var/lib/fail2ban/fail2ban.sqlite3'),
+  F2B_CONF: z.string().min(1).default('/etc/fail2ban'),
 });
 
 function loadConfig() {
@@ -30,6 +31,7 @@ function loadConfig() {
     dataDir: env.DATA_DIR,
     f2bSocket: env.F2B_SOCKET,
     f2bDb: env.F2B_DB,
+    f2bConf: env.F2B_CONF,
   };
 }
 

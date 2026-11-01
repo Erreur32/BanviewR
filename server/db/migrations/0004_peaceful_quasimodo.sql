@@ -1,0 +1,1 @@
+ALTER TABLE `hosts` ADD `conf_path` text DEFAULT '/etc/fail2ban' NOT NULL;

@@ -2,7 +2,7 @@ import { type AppDeps, buildApp } from './app.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
 import { openDb } from './db/index.ts';
 
-export const testLocalHost = { socketPath: '/tmp/f2b.sock', dbPath: '/tmp/f2b.sqlite3' };
+export const testLocalHost = { socketPath: '/tmp/f2b.sock', dbPath: '/tmp/f2b.sqlite3', confPath: '/tmp/f2b' };
 
 export function openTestDb() {
   return openDb(':memory:', testLocalHost);
@@ -17,6 +17,7 @@ export const fakeConnector = (overrides: Partial<Fail2banConnector> = {}): Fail2
     status: async () => ({ reachable: true, version: '1.1.0', error: null }),
     listJails: unexpected,
     jail: unexpected,
+    jailConfigs: unexpected,
     ban: unexpected,
     unban: unexpected,
     jailAction: unexpected,

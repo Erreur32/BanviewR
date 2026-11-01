@@ -31,10 +31,11 @@ function InstanceForm({ host, onDone }: { host: HostRow | null; onDone: () => vo
   const [name, setName] = useState(host?.name ?? '');
   const [socketPath, setSocketPath] = useState(host?.socketPath ?? '');
   const [dbPath, setDbPath] = useState(host?.dbPath ?? '');
+  const [confPath, setConfPath] = useState(host?.confPath ?? '/etc/fail2ban');
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { name, socketPath, dbPath };
+      const body = { name, socketPath, dbPath, confPath };
       return host ? api.patch(`/hosts/${host.id}`, body) : api.post('/hosts', body);
     },
     onSuccess: () => {
@@ -82,6 +83,16 @@ function InstanceForm({ host, onDone }: { host: HostRow | null; onDone: () => vo
             required
           />
         </div>
+        <TextField
+          label={t('instances.confPath')}
+          hint={t('instances.confHint')}
+          value={confPath}
+          onChange={(e) => setConfPath(e.target.value)}
+          maxLength={512}
+          pattern="/.+"
+          title={t('instances.confHint')}
+          required
+        />
         <div className="flex gap-2">
           <Button type="submit" disabled={save.isPending}>
             {t('common.save')}
@@ -136,6 +147,7 @@ function InstanceRow({
       <td className="font-mono text-xs text-muted">
         <p>{host.socketPath}</p>
         <p>{host.dbPath}</p>
+        <p>{host.confPath}</p>
       </td>
       <td>
         {isAdmin && (

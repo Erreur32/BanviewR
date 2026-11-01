@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { detectLocalFail2ban } from './detect.ts';
+import { parseDuration, readJailConfigs } from './jailConfig.ts';
 import { localConnector, parseJailList, parseJailStatus } from './local.ts';
 import { activeBans, banStats, recentBans } from './sqliteReader.ts';
 
@@ -40,20 +41,26 @@ function fakeProc(cmdlines: Record<string, string[]>) {
 describe('localConnector', () => {
   it('passes the instance socket and reports the server version', async () => {
     const client = script('client', 'echo "$1 $2 $3" > "$(dirname "$0")/args"; echo 1.1.0');
-    const status = await localConnector({ socketPath: '/run/custom.sock', dbPath: '/none' }, client).status();
+    const status = await localConnector(
+      { socketPath: '/run/custom.sock', dbPath: '/none', confPath: '/none' },
+      client,
+    ).status();
     expect(status).toEqual({ reachable: true, version: '1.1.0', error: null });
     expect(readFileSync(join(dir, 'args'), 'utf8').trim()).toBe('-s /run/custom.sock version');
   });
 
   it('reports an unreachable server', async () => {
     const client = script('client', 'echo "Failed to access socket path" >&2; exit 255');
-    const status = await localConnector({ socketPath: '/run/custom.sock', dbPath: '/none' }, client).status();
+    const status = await localConnector(
+      { socketPath: '/run/custom.sock', dbPath: '/none', confPath: '/none' },
+      client,
+    ).status();
     expect(status).toEqual({ reachable: false, version: null, error: 'UNREACHABLE' });
   });
 
   it('reports a missing client', async () => {
     const status = await localConnector(
-      { socketPath: '/run/custom.sock', dbPath: '/none' },
+      { socketPath: '/run/custom.sock', dbPath: '/none', confPath: '/none' },
       join(dir, 'nope'),
     ).status();
     expect(status).toEqual({ reachable: false, version: null, error: 'CLIENT_MISSING' });
@@ -153,7 +160,10 @@ describe('fail2ban-client output', () => {
 
 describe('localConnector commands', () => {
   const connector = (body: string) =>
-    localConnector({ socketPath: '/run/x.sock', dbPath: join(dir, 'none.sqlite3') }, script('client', body));
+    localConnector(
+      { socketPath: '/run/x.sock', dbPath: join(dir, 'none.sqlite3'), confPath: dir },
+      script('client', body),
+    );
 
   it('maps an unknown jail to NOT_FOUND', async () => {
     const jailError = `echo "Sorry but the jail 'x' does not exist"; echo "ERROR NOK: ('x',)" >&2; exit 255`;
@@ -238,5 +248,54 @@ describe('fail2ban database', () => {
 
   it('reports an unreadable database instead of an empty list', () => {
     expect(() => activeBans(join(dir, 'none.sqlite3'))).toThrowError(expect.objectContaining({ code: 'UNAVAILABLE' }));
+  });
+});
+
+describe('jail config', () => {
+  function conf(files: Record<string, string>) {
+    mkdirSync(join(dir, 'jail.d'));
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
+    return readJailConfigs(dir);
+  }
+
+  it('inherits defaults, in fail2ban override order', () => {
+    const jails = conf({
+      'jail.conf':
+        '[DEFAULT]\nbantime = 10m\nmaxretry = 5\nenabled = false\n\n[sshd]\nport = ssh\n[nginx]\nfilter = web\n',
+      'jail.d/a.conf': '[sshd]\nenabled = true\nbantime = 1h\n',
+      'jail.local': '[sshd]\nmaxretry = 3\n',
+      'jail.d/z.local': '[sshd]\nbantime = 1d\n',
+    });
+    expect(jails).toEqual([
+      { name: 'sshd', enabled: true, filter: null, bantime: 86400, findtime: null, maxretry: 3 },
+      { name: 'nginx', enabled: false, filter: 'web', bantime: 600, findtime: null, maxretry: 5 },
+    ]);
+  });
+
+  it('leaves out reserved sections and treats a missing enabled as off', () => {
+    const jails = conf({
+      'jail.conf': '[INCLUDES]\nbefore = paths.conf\n[DEFAULT]\nmaxretry = 2\n[sshd]\nport = 22\n',
+    });
+    expect(jails).toMatchObject([{ name: 'sshd', enabled: false, maxretry: 2 }]);
+  });
+
+  it('keeps the case of jail names, handles comments and continuation lines', () => {
+    const text = '# top\n[MyJail]\nenabled = true ; on\nfilter = %(__name__)s\nignoreip = 1.1.1.1\n  2.2.2.2\n';
+    expect(conf({ 'jail.conf': text })).toMatchObject([{ name: 'MyJail', enabled: true, filter: 'MyJail' }]);
+  });
+
+  it('survives a missing directory', () => {
+    expect(readJailConfigs(join(dir, 'nope'))).toEqual([]);
+  });
+
+  it('reads durations', () => {
+    expect(['600', '10m', '1.5h', '-1', '1h30m', undefined].map(parseDuration)).toEqual([
+      600,
+      600,
+      5400,
+      -1,
+      null,
+      null,
+    ]);
   });
 });

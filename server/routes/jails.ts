@@ -3,7 +3,16 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { okResponse } from '../../shared/api.ts';
-import { banRow, banStats, banTarget, jailAction, jailName, jailStatus, unbanTarget } from '../../shared/fail2ban.ts';
+import {
+  banRow,
+  banStats,
+  banTarget,
+  jailAction,
+  jailName,
+  jailRow,
+  jailStatus,
+  unbanTarget,
+} from '../../shared/fail2ban.ts';
 import { audit } from '../audit.ts';
 import { getHost } from '../db/queries.ts';
 import { AppError } from '../errors.ts';
@@ -12,6 +21,16 @@ import { CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
 const jailParams = hostParams.extend({ jail: jailName });
 const WRITE = { access: 'write', rateLimit: CLIENT_RATE_LIMIT } as const;
 const READ = { access: 'read', rateLimit: CLIENT_RATE_LIMIT } as const;
+
+const idleJail = (name: string) => ({
+  name,
+  currentlyFailed: 0,
+  totalFailed: 0,
+  currentlyBanned: 0,
+  totalBanned: 0,
+  bannedIps: [],
+  fileList: '',
+});
 
 const family = (ip: string) => (isIP(ip) === 6 ? 'ipv6' : 'ipv4');
 
@@ -45,8 +64,19 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     '/hosts/:hostId/jails',
-    { config: READ, schema: { params: hostParams, response: { 200: okResponse({ jails: z.array(jailStatus) }) } } },
-    async (req) => ok({ jails: await connector(req.params.hostId).listJails() }),
+    { config: READ, schema: { params: hostParams, response: { 200: okResponse({ jails: z.array(jailRow) }) } } },
+    async (req) => {
+      const host = connector(req.params.hostId);
+      const [running, configs] = await Promise.all([host.listJails(), host.jailConfigs()]);
+      const configOf = (name: string) => configs.find((c) => c.name === name) ?? null;
+      const stopped = configs.filter((c) => c.enabled && !running.some((j) => j.name === c.name));
+      return ok({
+        jails: [
+          ...running.map((jail) => ({ ...jail, running: true, config: configOf(jail.name) })),
+          ...stopped.map((config) => ({ ...idleJail(config.name), running: false, config })),
+        ],
+      });
+    },
   );
 
   app.get(

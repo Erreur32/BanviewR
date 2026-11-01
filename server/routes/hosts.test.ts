@@ -6,7 +6,12 @@ import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
 const ADMIN = { username: 'admin', password: pw('hosts-admin') };
-const SECOND = { name: 'second', socketPath: '/run/second.sock', dbPath: '/var/lib/second.sqlite3' };
+const SECOND = {
+  name: 'second',
+  socketPath: '/run/second.sock',
+  dbPath: '/var/lib/second.sqlite3',
+  confPath: '/etc/second',
+};
 
 let app: FastifyInstance;
 let cookie: string;
