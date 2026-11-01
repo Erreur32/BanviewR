@@ -1,16 +1,25 @@
 import { join } from 'node:path';
 import { buildApp } from './app.ts';
 import { config } from './config.ts';
+import { detectLocalFail2ban } from './connectors/detect.ts';
+import { localConnector } from './connectors/local.ts';
 import { openDb } from './db/index.ts';
 
 const db = openDb(join(config.dataDir, 'banviewr.db'), { socketPath: config.f2bSocket, dbPath: config.f2bDb });
 
-const app = await buildApp(db, {
-  trustProxy: config.trustProxy,
-  logger: config.isDev
-    ? { transport: { target: 'pino-pretty', options: { translateTime: 'SYS:HH:MM:ss', ignore: 'pid,hostname' } } }
-    : true,
-});
+const detection = await detectLocalFail2ban(config.f2bSocket);
+
+const app = await buildApp(
+  db,
+  { connect: localConnector, detection },
+  {
+    trustProxy: config.trustProxy,
+    logger: config.isDev
+      ? { transport: { target: 'pino-pretty', options: { translateTime: 'SYS:HH:MM:ss', ignore: 'pid,hostname' } } }
+      : true,
+  },
+);
+app.log.info(detection, 'Local fail2ban detection');
 
 async function shutdown(signal: string) {
   app.log.info(`${signal} received, shutting down`);

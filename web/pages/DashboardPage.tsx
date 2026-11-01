@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import type { HealthResult } from '../../shared/api.ts';
 import { api } from '../api.ts';
@@ -34,7 +35,9 @@ export function DashboardPage() {
           </p>
         )}
       </Card>
-      <p className="text-sm text-muted">{t('dashboard.instancesSoon')}</p>
+      <Link to="/instances" className="text-sm text-accent hover:underline">
+        {t('dashboard.instancesLink')}
+      </Link>
     </div>
   );
 }

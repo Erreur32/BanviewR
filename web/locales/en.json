@@ -10,6 +10,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "instances": "Instances",
     "preferences": "Preferences",
     "menu": "Navigation",
     "users": "Users",
@@ -43,7 +44,7 @@
     "serverOk": "Server OK",
     "serverDown": "Server unreachable",
     "versionUptime": "v{{version}}, up for {{uptime}}",
-    "instancesSoon": "fail2ban instances will show up here in the next step."
+    "instancesLink": "See fail2ban instances"
   },
   "prefs": {
     "title": "Preferences",
@@ -94,7 +95,7 @@
       "write": "write (fail2ban actions)",
       "admin": "admin (everything)"
     },
-    "instancesHint": "The token can reach every instance. Per-instance restriction comes with instance management.",
+    "instancesHint": "With nothing selected, the token reaches every instance.",
     "instances": "Instances",
     "allInstances": "All",
     "statusLabel": "Status",
@@ -116,7 +117,8 @@
     "copy": "Copy",
     "copied": "Token copied.",
     "usage": "Send it in the header",
-    "secretSaved": "Got it, hide"
+    "secretSaved": "Got it, hide",
+    "instancesAdminHint": "The admin scope is global: it cannot be limited to some instances."
   },
   "audit": {
     "title": "Audit log",
@@ -138,6 +140,38 @@
     "failed": "Failed",
     "empty": "No entry.",
     "loadMore": "Load more"
+  },
+  "instances": {
+    "title": "Instances",
+    "intro": "Each instance is a fail2ban driven by BanviewR, with its own socket and database.",
+    "detectionTitle": "Fail2ban on this machine",
+    "mode": {
+      "external": "External mode",
+      "none": "No fail2ban"
+    },
+    "reason": {
+      "socket": "The fail2ban socket answers: BanviewR uses the host's fail2ban.",
+      "process": "A fail2ban-server process is running: BanviewR uses the host's fail2ban.",
+      "service": "The fail2ban service is installed: BanviewR uses the host's fail2ban.",
+      "none": "No fail2ban found when the server started. Embedded mode comes in v0.2."
+    },
+    "name": "Name",
+    "status": "Status",
+    "paths": "Socket and database",
+    "reachable": "Connected, v{{version}}",
+    "error": {
+      "UNREACHABLE": "Unreachable (socket missing or access refused)",
+      "CLIENT_MISSING": "fail2ban-client missing"
+    },
+    "edit": "Edit",
+    "createTitle": "New instance",
+    "editTitle": "Edit {{name}}",
+    "socketPath": "Socket",
+    "socketHint": "Absolute path, for example /var/run/fail2ban/fail2ban.sock.",
+    "dbPath": "Fail2ban database",
+    "dbHint": "Absolute path, for example /var/lib/fail2ban/fail2ban.sqlite3.",
+    "saved": "Instance {{name}} saved.",
+    "deleted": "Instance {{name}} removed. Fail2ban and its bans are not touched."
   },
   "errors": {
     "VALIDATION": "Invalid data.",

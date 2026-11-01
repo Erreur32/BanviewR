@@ -12,6 +12,6 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
       config: { access: 'public' },
       schema: { response: { 200: apiResponse(healthResult) } },
     },
-    async () => ok({ version: pkg.version, uptime: Math.round(process.uptime()) }),
+    async () => ok({ version: pkg.version, uptime: Math.round(process.uptime()), fail2ban: app.detection }),
   );
 };

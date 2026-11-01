@@ -9,7 +9,7 @@ import { toIso } from '../dates.ts';
 import type { Db } from '../db/index.ts';
 import { apiTokens, hosts } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
-import { idParams, ok } from '../http.ts';
+import { ADMIN_SESSION, idParams, ok } from '../http.ts';
 
 const toTokenRow = (t: typeof apiTokens.$inferSelect) => ({
   id: t.id,
@@ -30,8 +30,6 @@ function getToken(db: Db, id: number) {
 }
 
 // Token management needs a signed-in admin: a leaked admin token cannot mint new tokens
-const ADMIN_SESSION = { access: 'admin', sessionOnly: true } as const;
-
 export const tokenRoutes: FastifyPluginAsyncZod = async (app) => {
   const { db } = app;
 

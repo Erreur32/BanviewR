@@ -2,27 +2,34 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyServerOptions } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import type { LocalDetection } from '../shared/hosts.ts';
 import { registerAccessControl } from './auth/access.ts';
+import type { ConnectorFactory } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
 import { registerErrorHandling } from './errors.ts';
 import { registerOpenApi } from './openapi.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
 import { healthRoutes } from './routes/health.ts';
+import { hostRoutes } from './routes/hosts.ts';
 import { tokenRoutes } from './routes/tokens.ts';
 import { userRoutes } from './routes/users.ts';
 
+export type AppDeps = { connect: ConnectorFactory; detection: LocalDetection };
+
 declare module 'fastify' {
-  interface FastifyInstance {
+  interface FastifyInstance extends AppDeps {
     db: Db;
   }
 }
 
-export async function buildApp(db: Db, opts: FastifyServerOptions = {}) {
+export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions = {}) {
   const app = Fastify(opts);
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.decorate('db', db);
+  app.decorate('connect', deps.connect);
+  app.decorate('detection', deps.detection);
   app.addHook('onClose', async () => db.$client.close());
   registerErrorHandling(app);
 
@@ -39,6 +46,7 @@ export async function buildApp(db: Db, opts: FastifyServerOptions = {}) {
       await api.register(userRoutes);
       await api.register(tokenRoutes);
       await api.register(auditRoutes);
+      await api.register(hostRoutes);
     },
     { prefix: '/api' },
   );

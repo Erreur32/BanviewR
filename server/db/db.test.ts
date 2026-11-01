@@ -25,4 +25,15 @@ describe('openDb', () => {
     expect(db.select().from(hosts).all()).toHaveLength(1);
     db.$client.close();
   });
+
+  it('does not bring the local host back after a rename', () => {
+    dir = mkdtempSync(join(tmpdir(), 'banviewr-'));
+    const file = join(dir, 'test.db');
+    const first = openDb(file, testLocalHost);
+    first.update(hosts).set({ name: 'web-1' }).run();
+    first.$client.close();
+    const db = openDb(file, testLocalHost);
+    expect(db.select().from(hosts).all()).toMatchObject([{ name: 'web-1' }]);
+    db.$client.close();
+  });
 });

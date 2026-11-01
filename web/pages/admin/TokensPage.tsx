@@ -15,6 +15,7 @@ import {
   TextField,
 } from '../../components/ui.tsx';
 import { errorText } from '../../errors.ts';
+import { hostsQuery } from '../../hosts.ts';
 import { notify } from '../../stores/notificationStore.ts';
 
 const SCOPES: Scope[] = ['read', 'write', 'admin'];
@@ -73,18 +74,24 @@ function CreateTokenCard({ onCreated }: { onCreated: (name: string, secret: stri
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<Scope[]>(['read']);
   const [expiresInDays, setExpiresInDays] = useState('90');
+  const [hostIds, setHostIds] = useState<number[]>([]);
+  const hosts = useQuery(hostsQuery);
+  // The admin scope is global, the server refuses it on a limited token
+  const limitable = !scopes.includes('admin');
 
   const create = useMutation({
     mutationFn: () =>
       api.post<{ token: TokenRow; secret: string }>('/tokens', {
         name,
         scopes,
+        hostIds: limitable && hostIds.length > 0 ? hostIds : null,
         expiresInDays: expiresInDays ? Number(expiresInDays) : null,
       }),
     onSuccess: ({ token, secret }) => {
       queryClient.invalidateQueries({ queryKey: tokensKey });
       onCreated(token.name, secret);
       setName('');
+      setHostIds([]);
     },
   });
 
@@ -134,7 +141,24 @@ function CreateTokenCard({ onCreated }: { onCreated: (name: string, secret: stri
           </div>
           <p className="mt-1 text-xs text-muted">{t('tokens.scopesHint')}</p>
         </fieldset>
-        <p className="mb-4 text-xs text-muted">{t('tokens.instancesHint')}</p>
+        <fieldset className="mb-4" disabled={!limitable}>
+          <legend className="mb-1 text-sm text-muted">{t('tokens.instances')}</legend>
+          <div className="flex flex-wrap gap-4">
+            {hosts.data?.hosts.map((host) => (
+              <CheckboxField
+                key={host.id}
+                label={host.name}
+                checked={limitable && hostIds.includes(host.id)}
+                onChange={(e) =>
+                  setHostIds((prev) => (e.target.checked ? [...prev, host.id] : prev.filter((id) => id !== host.id)))
+                }
+              />
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            {t(limitable ? 'tokens.instancesHint' : 'tokens.instancesAdminHint')}
+          </p>
+        </fieldset>
         <Button type="submit" disabled={create.isPending || scopes.length === 0}>
           {t('tokens.createSubmit')}
         </Button>
@@ -150,6 +174,10 @@ function TokenRowView({ token }: { token: TokenRow }) {
   const queryClient = useQueryClient();
   const formatDate = useFormatDateTime();
   const status = tokenStatus(token);
+  const hosts = useQuery(hostsQuery);
+  // A removed instance keeps its id in the token, shown as #id
+  const hostNames = (ids: number[]) =>
+    ids.map((id) => hosts.data?.hosts.find((h) => h.id === id)?.name ?? `#${id}`).join(', ');
   const mutationOpts = (done: string) => ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tokensKey });
@@ -179,7 +207,7 @@ function TokenRowView({ token }: { token: TokenRow }) {
           ))}
         </div>
       </td>
-      <td className="text-muted">{token.hostIds ? token.hostIds.join(', ') : t('tokens.allInstances')}</td>
+      <td className="text-muted">{token.hostIds ? hostNames(token.hostIds) : t('tokens.allInstances')}</td>
       <td>
         <Badge tone={STATUS_TONE[status]}>{t(`tokens.status.${status}`)}</Badge>
       </td>

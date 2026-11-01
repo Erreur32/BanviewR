@@ -17,9 +17,12 @@ export function openDb(file: string, localHost: { socketPath: string; dbPath: st
 
   const db = drizzle(sqlite, { schema });
   migrate(db, { migrationsFolder });
-  db.insert(schema.hosts)
-    .values({ name: 'local', ...localHost })
-    .onConflictDoNothing({ target: schema.hosts.name })
-    .run();
+  // Only on an empty table: 'local' can be renamed or removed from the UI, it must not come back.
+  // The last instance cannot be deleted, so this runs once.
+  if (!db.select({ id: schema.hosts.id }).from(schema.hosts).limit(1).get()) {
+    db.insert(schema.hosts)
+      .values({ name: 'local', ...localHost })
+      .run();
+  }
   return db;
 }

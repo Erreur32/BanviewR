@@ -9,6 +9,7 @@ import { AuditPage } from './pages/admin/AuditPage.tsx';
 import { TokensPage } from './pages/admin/TokensPage.tsx';
 import { UsersPage } from './pages/admin/UsersPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
+import { InstancesPage } from './pages/InstancesPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { PreferencesPage } from './pages/PreferencesPage.tsx';
 import { SetupPage } from './pages/SetupPage.tsx';
@@ -70,6 +71,7 @@ const appRoute = createRoute({
 });
 
 const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage });
+const instancesRoute = createRoute({ getParentRoute: () => appRoute, path: '/instances', component: InstancesPage });
 const preferencesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/preferences',
@@ -94,6 +96,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
     dashboardRoute,
+    instancesRoute,
     preferencesRoute,
     adminRoute.addChildren([usersRoute, tokensRoute, auditRoute]),
   ]),

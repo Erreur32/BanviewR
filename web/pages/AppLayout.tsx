@@ -6,6 +6,7 @@ import { useCurrentUser } from '../auth.ts';
 
 const NAV = [
   { to: '/', label: 'nav.dashboard' },
+  { to: '/instances', label: 'nav.instances' },
   { to: '/preferences', label: 'nav.preferences' },
 ] as const;
 

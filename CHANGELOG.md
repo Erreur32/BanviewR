@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usernames are case-insensitive: `Admin` and `admin` are the same account.
 - Deleting an admin, or demoting it to viewer, revokes the API tokens it created.
 - Each user picks the time zone used to show dates (default: the browser's).
+- fail2ban instances: list with live status (connected and version, unreachable, client missing), add, edit and remove from the new Instances page. Removing an instance never touches fail2ban or its bans.
+- Startup check for a fail2ban on the machine (socket, process, systemd service). The result and its reason show on the Instances page and in `/api/health`.
+- API tokens can be limited to chosen instances from the token form.
 - Web app: first admin setup page, sign-in page, app layout with sidebar (stacked on phones), user name, role and sign-out in the header.
 - Preferences page: language (French or English), time zone with a live preview, password change.
 - Notifications (toasts) for saved changes; an expired session sends you back to the sign-in page with a message.

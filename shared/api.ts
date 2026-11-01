@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { localDetection } from './hosts.ts';
 
 // Every API response is wrapped as { success: true, result }.
 // Errors are reported inside result (ok: false), still with HTTP 200.
@@ -36,5 +37,6 @@ export const healthResult = z.object({
   ok: z.boolean(),
   version: z.string(),
   uptime: z.number(),
+  fail2ban: localDetection,
 });
 export type HealthResult = z.infer<typeof healthResult>;
