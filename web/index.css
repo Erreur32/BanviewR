@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* GitHub-dark palette */
+@theme {
+  --color-bg0: #0d1117;
+  --color-bg1: #161b22;
+  --color-bg2: #21262d;
+  --color-border: #30363d;
+  --color-text: #e6edf3;
+  --color-muted: #8b949e;
+  --color-ok: #3fb950;
+  --color-danger: #f85149;
+  --color-accent: #58a6ff;
+}
+
+body {
+  @apply bg-bg0 text-text antialiased;
+}

@@ -1,0 +1,189 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "confirm": "Confirmer ?",
+    "refresh": "Actualiser"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "instances": "Instances",
+    "preferences": "Préférences",
+    "menu": "Navigation",
+    "users": "Utilisateurs",
+    "tokens": "Jetons d'API",
+    "audit": "Journal d'audit",
+    "apiDocs": "Documentation API"
+  },
+  "roles": {
+    "admin": "Admin",
+    "viewer": "Lecture seule"
+  },
+  "auth": {
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "passwordConfirm": "Confirmer le mot de passe",
+    "passwordHint": "10 caractères minimum.",
+    "usernameHint": "3 à 32 caractères : lettres, chiffres, point, tiret, tiret bas.",
+    "passwordMismatch": "Les deux mots de passe ne correspondent pas.",
+    "loginTitle": "Connexion",
+    "loginSubmit": "Se connecter",
+    "logout": "Déconnexion",
+    "setupTitle": "Bienvenue dans BanviewR",
+    "setupIntro": "Créez le compte administrateur. Il n'existe aucun mot de passe par défaut : ce compte sera le seul à pouvoir en créer d'autres.",
+    "setupSubmit": "Créer le compte administrateur",
+    "sessionExpired": "Session expirée, reconnectez-vous."
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "server": "Serveur",
+    "connecting": "Connexion au serveur...",
+    "serverOk": "Serveur OK",
+    "serverDown": "Serveur injoignable",
+    "versionUptime": "v{{version}}, démarré depuis {{uptime}}",
+    "instancesLink": "Voir les instances fail2ban"
+  },
+  "prefs": {
+    "title": "Préférences",
+    "display": "Affichage",
+    "language": "Langue",
+    "timezone": "Fuseau horaire",
+    "timezoneBrowser": "Celui du navigateur ({{zone}})",
+    "timezonePreview": "Heure actuelle dans ce fuseau : {{time}}",
+    "saved": "Préférences enregistrées.",
+    "passwordTitle": "Mot de passe",
+    "passwordIntro": "Changer le mot de passe déconnecte vos autres sessions.",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "passwordSubmit": "Changer le mot de passe",
+    "passwordChanged": "Mot de passe changé, vos autres sessions sont déconnectées."
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "intro": "Les admins pilotent fail2ban et gèrent l'application, les comptes en lecture seule consultent uniquement.",
+    "role": "Rôle",
+    "createdAt": "Créé le",
+    "lastLogin": "Dernière connexion",
+    "never": "Jamais",
+    "you": "vous",
+    "createTitle": "Nouvel utilisateur",
+    "createSubmit": "Créer l'utilisateur",
+    "created": "Utilisateur {{username}} créé.",
+    "roleChanged": "Rôle de {{username}} modifié, ses sessions sont déconnectées.",
+    "deleted": "Utilisateur {{username}} supprimé.",
+    "resetPassword": "Nouveau mot de passe",
+    "newPasswordFor": "Nouveau mot de passe pour {{username}}",
+    "passwordResetHint": "10 caractères minimum. Ses sessions ouvertes seront déconnectées.",
+    "passwordReset": "Mot de passe de {{username}} changé."
+  },
+  "tokens": {
+    "title": "Jetons d'API",
+    "intro": "Pour les scripts et le serveur MCP. Un jeton ne gère ni les utilisateurs ni les autres jetons : ces pages exigent une session.",
+    "createTitle": "Nouveau jeton",
+    "createSubmit": "Créer le jeton",
+    "name": "Nom",
+    "nameHint": "Pour vous y retrouver, par exemple « script de sauvegarde ».",
+    "expiresInDays": "Expire dans (jours)",
+    "expiresHint": "Laisser vide pour un jeton sans expiration (déconseillé).",
+    "scopes": "Portées",
+    "scopesHint": "admin inclut write, write inclut read.",
+    "scope": {
+      "read": "read (lecture)",
+      "write": "write (actions fail2ban)",
+      "admin": "admin (tout)"
+    },
+    "instancesHint": "Sans sélection, le jeton donne accès à toutes les instances.",
+    "instances": "Instances",
+    "allInstances": "Toutes",
+    "statusLabel": "État",
+    "status": {
+      "active": "Actif",
+      "expired": "Expiré",
+      "revoked": "Révoqué"
+    },
+    "expiresAt": "Expire le",
+    "noExpiry": "Jamais",
+    "lastUsed": "Dernière utilisation",
+    "revoke": "Révoquer",
+    "revoked": "Jeton {{name}} révoqué.",
+    "deleted": "Jeton {{name}} supprimé.",
+    "empty": "Aucun jeton pour le moment.",
+    "secretTitle": "Jeton « {{name}} » créé",
+    "secretWarning": "Copiez-le maintenant : il ne sera plus jamais affiché. Seule son empreinte est conservée.",
+    "secret": "Jeton",
+    "copy": "Copier",
+    "copied": "Jeton copié.",
+    "usage": "À envoyer dans l'en-tête",
+    "secretSaved": "C'est noté, masquer",
+    "instancesAdminHint": "La portée admin est globale : elle ne peut pas être limitée à certaines instances."
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "intro": "Toutes les modifications et connexions, les plus récentes en premier.",
+    "at": "Date",
+    "actor": "Auteur",
+    "action": "Action",
+    "target": "Cible",
+    "result": "Résultat",
+    "detail": "Détail",
+    "instance": "Instance",
+    "ip": "IP",
+    "actorType": {
+      "user": "utilisateur",
+      "token": "jeton",
+      "system": "système"
+    },
+    "ok": "OK",
+    "failed": "Échec",
+    "empty": "Aucune entrée.",
+    "loadMore": "Charger plus"
+  },
+  "instances": {
+    "title": "Instances",
+    "intro": "Chaque instance est un fail2ban piloté par BanviewR, avec son propre socket et sa propre base.",
+    "detectionTitle": "Fail2ban sur cette machine",
+    "mode": {
+      "external": "Mode externe",
+      "none": "Aucun fail2ban"
+    },
+    "reason": {
+      "socket": "Le socket fail2ban répond : BanviewR utilise le fail2ban de l'hôte.",
+      "process": "Un processus fail2ban-server tourne : BanviewR utilise le fail2ban de l'hôte.",
+      "service": "Le service fail2ban est installé : BanviewR utilise le fail2ban de l'hôte.",
+      "none": "Aucun fail2ban trouvé au démarrage du serveur. Le mode embarqué arrivera en v0.2."
+    },
+    "name": "Nom",
+    "status": "État",
+    "paths": "Socket et base",
+    "reachable": "Connecté, v{{version}}",
+    "error": {
+      "UNREACHABLE": "Injoignable (socket absent ou accès refusé)",
+      "CLIENT_MISSING": "fail2ban-client manquant"
+    },
+    "edit": "Modifier",
+    "createTitle": "Nouvelle instance",
+    "editTitle": "Modifier {{name}}",
+    "socketPath": "Socket",
+    "socketHint": "Chemin absolu, par exemple /var/run/fail2ban/fail2ban.sock.",
+    "dbPath": "Base fail2ban",
+    "dbHint": "Chemin absolu, par exemple /var/lib/fail2ban/fail2ban.sqlite3.",
+    "saved": "Instance {{name}} enregistrée.",
+    "deleted": "Instance {{name}} retirée. Fail2ban et ses bans ne sont pas touchés."
+  },
+  "errors": {
+    "VALIDATION": "Données invalides.",
+    "BAD_REQUEST": "Requête invalide.",
+    "NOT_FOUND": "Élément introuvable.",
+    "CONFLICT": "Opération impossible dans l'état actuel.",
+    "UNAUTHORIZED": "Vous devez vous connecter.",
+    "FORBIDDEN": "Vous n'avez pas les droits pour cette action.",
+    "INVALID_CREDENTIALS": "Identifiants incorrects.",
+    "LOCKED": "Trop d'échecs : compte bloqué temporairement, réessayez dans 15 minutes.",
+    "RATE_LIMITED": "Trop de requêtes, patientez un peu.",
+    "UNAVAILABLE": "fail2ban ne répond pas pour cette instance.",
+    "INTERNAL": "Erreur du serveur, réessayez plus tard."
+  }
+}

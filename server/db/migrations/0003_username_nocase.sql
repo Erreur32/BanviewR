@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `users_username_nocase` ON `users` (lower("username"));

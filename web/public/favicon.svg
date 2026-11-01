@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>BanviewR</title>
+  <style>
+    rect { fill: #57606a; }
+    @media (prefers-color-scheme: dark) { rect { fill: #8b949e; } }
+    rect.banned { fill: #f85149; }
+  </style>
+  <rect x="4" y="4" width="16" height="16" rx="3"/>
+  <rect x="24" y="4" width="16" height="16" rx="3"/>
+  <rect class="banned" x="44" y="4" width="16" height="16" rx="3"/>
+  <rect x="4" y="24" width="16" height="16" rx="3"/>
+  <rect x="24" y="24" width="16" height="16" rx="3"/>
+  <rect x="44" y="24" width="16" height="16" rx="3"/>
+  <rect x="4" y="44" width="16" height="16" rx="3"/>
+  <rect x="24" y="44" width="16" height="16" rx="3"/>
+  <rect x="44" y="44" width="16" height="16" rx="3"/>
+</svg>

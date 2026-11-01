@@ -1,0 +1,189 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "close": "Close",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm?",
+    "refresh": "Refresh"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "instances": "Instances",
+    "preferences": "Preferences",
+    "menu": "Navigation",
+    "users": "Users",
+    "tokens": "API tokens",
+    "audit": "Audit log",
+    "apiDocs": "API documentation"
+  },
+  "roles": {
+    "admin": "Admin",
+    "viewer": "Read only"
+  },
+  "auth": {
+    "username": "Username",
+    "password": "Password",
+    "passwordConfirm": "Confirm password",
+    "passwordHint": "At least 10 characters.",
+    "usernameHint": "3 to 32 characters: letters, digits, dot, dash, underscore.",
+    "passwordMismatch": "The two passwords do not match.",
+    "loginTitle": "Sign in",
+    "loginSubmit": "Sign in",
+    "logout": "Sign out",
+    "setupTitle": "Welcome to BanviewR",
+    "setupIntro": "Create the administrator account. There is no default password: this account will be the only one able to create others.",
+    "setupSubmit": "Create the administrator account",
+    "sessionExpired": "Session expired, please sign in again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "server": "Server",
+    "connecting": "Connecting to the server...",
+    "serverOk": "Server OK",
+    "serverDown": "Server unreachable",
+    "versionUptime": "v{{version}}, up for {{uptime}}",
+    "instancesLink": "See fail2ban instances"
+  },
+  "prefs": {
+    "title": "Preferences",
+    "display": "Display",
+    "language": "Language",
+    "timezone": "Time zone",
+    "timezoneBrowser": "Browser time zone ({{zone}})",
+    "timezonePreview": "Current time in this zone: {{time}}",
+    "saved": "Preferences saved.",
+    "passwordTitle": "Password",
+    "passwordIntro": "Changing your password signs out your other sessions.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "passwordSubmit": "Change password",
+    "passwordChanged": "Password changed, your other sessions are signed out."
+  },
+  "users": {
+    "title": "Users",
+    "intro": "Admins drive fail2ban and manage the app, read-only accounts can only look.",
+    "role": "Role",
+    "createdAt": "Created",
+    "lastLogin": "Last sign-in",
+    "never": "Never",
+    "you": "you",
+    "createTitle": "New user",
+    "createSubmit": "Create user",
+    "created": "User {{username}} created.",
+    "roleChanged": "Role of {{username}} changed, their sessions are signed out.",
+    "deleted": "User {{username}} deleted.",
+    "resetPassword": "New password",
+    "newPasswordFor": "New password for {{username}}",
+    "passwordResetHint": "At least 10 characters. Their open sessions will be signed out.",
+    "passwordReset": "Password of {{username}} changed."
+  },
+  "tokens": {
+    "title": "API tokens",
+    "intro": "For scripts and the MCP server. A token cannot manage users or other tokens: these pages need a session.",
+    "createTitle": "New token",
+    "createSubmit": "Create token",
+    "name": "Name",
+    "nameHint": "To recognize it later, for example \"backup script\".",
+    "expiresInDays": "Expires in (days)",
+    "expiresHint": "Leave empty for a token that never expires (not recommended).",
+    "scopes": "Scopes",
+    "scopesHint": "admin includes write, write includes read.",
+    "scope": {
+      "read": "read",
+      "write": "write (fail2ban actions)",
+      "admin": "admin (everything)"
+    },
+    "instancesHint": "With nothing selected, the token reaches every instance.",
+    "instances": "Instances",
+    "allInstances": "All",
+    "statusLabel": "Status",
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "revoked": "Revoked"
+    },
+    "expiresAt": "Expires",
+    "noExpiry": "Never",
+    "lastUsed": "Last used",
+    "revoke": "Revoke",
+    "revoked": "Token {{name}} revoked.",
+    "deleted": "Token {{name}} deleted.",
+    "empty": "No token yet.",
+    "secretTitle": "Token \"{{name}}\" created",
+    "secretWarning": "Copy it now: it will never be shown again. Only its hash is stored.",
+    "secret": "Token",
+    "copy": "Copy",
+    "copied": "Token copied.",
+    "usage": "Send it in the header",
+    "secretSaved": "Got it, hide",
+    "instancesAdminHint": "The admin scope is global: it cannot be limited to some instances."
+  },
+  "audit": {
+    "title": "Audit log",
+    "intro": "Every change and sign-in, most recent first.",
+    "at": "Date",
+    "actor": "Actor",
+    "action": "Action",
+    "target": "Target",
+    "result": "Result",
+    "detail": "Detail",
+    "instance": "Instance",
+    "ip": "IP",
+    "actorType": {
+      "user": "user",
+      "token": "token",
+      "system": "system"
+    },
+    "ok": "OK",
+    "failed": "Failed",
+    "empty": "No entry.",
+    "loadMore": "Load more"
+  },
+  "instances": {
+    "title": "Instances",
+    "intro": "Each instance is a fail2ban driven by BanviewR, with its own socket and database.",
+    "detectionTitle": "Fail2ban on this machine",
+    "mode": {
+      "external": "External mode",
+      "none": "No fail2ban"
+    },
+    "reason": {
+      "socket": "The fail2ban socket answers: BanviewR uses the host's fail2ban.",
+      "process": "A fail2ban-server process is running: BanviewR uses the host's fail2ban.",
+      "service": "The fail2ban service is installed: BanviewR uses the host's fail2ban.",
+      "none": "No fail2ban found when the server started. Embedded mode comes in v0.2."
+    },
+    "name": "Name",
+    "status": "Status",
+    "paths": "Socket and database",
+    "reachable": "Connected, v{{version}}",
+    "error": {
+      "UNREACHABLE": "Unreachable (socket missing or access refused)",
+      "CLIENT_MISSING": "fail2ban-client missing"
+    },
+    "edit": "Edit",
+    "createTitle": "New instance",
+    "editTitle": "Edit {{name}}",
+    "socketPath": "Socket",
+    "socketHint": "Absolute path, for example /var/run/fail2ban/fail2ban.sock.",
+    "dbPath": "Fail2ban database",
+    "dbHint": "Absolute path, for example /var/lib/fail2ban/fail2ban.sqlite3.",
+    "saved": "Instance {{name}} saved.",
+    "deleted": "Instance {{name}} removed. Fail2ban and its bans are not touched."
+  },
+  "errors": {
+    "VALIDATION": "Invalid data.",
+    "BAD_REQUEST": "Invalid request.",
+    "NOT_FOUND": "Not found.",
+    "CONFLICT": "Not possible in the current state.",
+    "UNAUTHORIZED": "You need to sign in.",
+    "FORBIDDEN": "You are not allowed to do this.",
+    "INVALID_CREDENTIALS": "Wrong username or password.",
+    "LOCKED": "Too many failures: account temporarily locked, retry in 15 minutes.",
+    "RATE_LIMITED": "Too many requests, please wait a moment.",
+    "UNAVAILABLE": "fail2ban does not answer for this instance.",
+    "INTERNAL": "Server error, please retry later."
+  }
+}
