@@ -171,7 +171,9 @@
     "dbPath": "Fail2ban database",
     "dbHint": "Absolute path, for example /var/lib/fail2ban/fail2ban.sqlite3.",
     "saved": "Instance {{name}} saved.",
-    "deleted": "Instance {{name}} removed. Fail2ban and its bans are not touched."
+    "deleted": "Instance {{name}} removed. Fail2ban and its bans are not touched.",
+    "conflict": "This name or socket is already used by another instance.",
+    "lastInstance": "The last instance cannot be removed."
   },
   "errors": {
     "VALIDATION": "Invalid data.",

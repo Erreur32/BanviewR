@@ -1,14 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { TFunction } from 'i18next';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { HealthResult } from '../../shared/api.ts';
 import type { HostRow } from '../../shared/hosts.ts';
-import { api } from '../api.ts';
+import { ApiError, api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
 import { Badge, Button, Card, ConfirmButton, ErrorText, Table, TextField } from '../components/ui.tsx';
 import { errorText } from '../errors.ts';
 import { hostsQuery } from '../hosts.ts';
 import { notify } from '../stores/notificationStore.ts';
+
+// The generic CONFLICT text does not say what to change
+const conflictText = (t: TFunction, err: Error, key: string) =>
+  err instanceof ApiError && err.code === 'CONFLICT' ? t(key) : errorText(t, err);
 
 function DetectionCard() {
   const { t } = useTranslation();
@@ -52,7 +57,7 @@ function InstanceForm({ host, onDone }: { host: HostRow | null; onDone: () => vo
   return (
     <Card title={host ? t('instances.editTitle', { name: host.name }) : t('instances.createTitle')}>
       <form onSubmit={submit}>
-        <ErrorText>{save.error && errorText(t, save.error)}</ErrorText>
+        <ErrorText>{save.error && conflictText(t, save.error, 'instances.conflict')}</ErrorText>
         <TextField
           label={t('instances.name')}
           value={name}
@@ -67,6 +72,8 @@ function InstanceForm({ host, onDone }: { host: HostRow | null; onDone: () => vo
             value={socketPath}
             onChange={(e) => setSocketPath(e.target.value)}
             maxLength={512}
+            pattern="/.+"
+            title={t('instances.socketHint')}
             required
           />
           <TextField
@@ -75,6 +82,8 @@ function InstanceForm({ host, onDone }: { host: HostRow | null; onDone: () => vo
             value={dbPath}
             onChange={(e) => setDbPath(e.target.value)}
             maxLength={512}
+            pattern="/.+"
+            title={t('instances.dbHint')}
             required
           />
         </div>
@@ -100,7 +109,17 @@ function StatusBadge({ host }: { host: HostRow }) {
   return <Badge tone="danger">{t(`instances.error.${error ?? 'UNREACHABLE'}`)}</Badge>;
 }
 
-function InstanceRow({ host, isAdmin, onEdit }: { host: HostRow; isAdmin: boolean; onEdit: () => void }) {
+function InstanceRow({
+  host,
+  isAdmin,
+  onEdit,
+  onDeleted,
+}: {
+  host: HostRow;
+  isAdmin: boolean;
+  onEdit: () => void;
+  onDeleted: () => void;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const remove = useMutation({
@@ -108,8 +127,9 @@ function InstanceRow({ host, isAdmin, onEdit }: { host: HostRow; isAdmin: boolea
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: hostsQuery.queryKey });
       notify('success', t('instances.deleted', { name: host.name }));
+      onDeleted();
     },
-    onError: (err: Error) => notify('error', errorText(t, err)),
+    onError: (err: Error) => notify('error', conflictText(t, err, 'instances.lastInstance')),
   });
 
   return (
@@ -164,7 +184,13 @@ export function InstancesPage() {
       {hosts.data && (
         <Table columns={[t('instances.name'), t('instances.status'), t('instances.paths'), '']}>
           {hosts.data.hosts.map((host) => (
-            <InstanceRow key={host.id} host={host} isAdmin={isAdmin} onEdit={() => setEditing(host)} />
+            <InstanceRow
+              key={host.id}
+              host={host}
+              isAdmin={isAdmin}
+              onEdit={() => setEditing(host)}
+              onDeleted={() => setEditing((current) => (current?.id === host.id ? null : current))}
+            />
           ))}
         </Table>
       )}
