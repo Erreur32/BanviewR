@@ -12,6 +12,7 @@ import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
 import { healthRoutes } from './routes/health.ts';
 import { hostRoutes } from './routes/hosts.ts';
+import { jailRoutes } from './routes/jails.ts';
 import { tokenRoutes } from './routes/tokens.ts';
 import { userRoutes } from './routes/users.ts';
 
@@ -47,6 +48,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       await api.register(tokenRoutes);
       await api.register(auditRoutes);
       await api.register(hostRoutes);
+      await api.register(jailRoutes);
     },
     { prefix: '/api' },
   );

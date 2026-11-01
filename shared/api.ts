@@ -22,6 +22,7 @@ export const apiErrorCode = z.enum([
   'INVALID_CREDENTIALS',
   'LOCKED',
   'RATE_LIMITED',
+  'UNAVAILABLE',
   'INTERNAL',
 ]);
 export type ApiErrorCode = z.infer<typeof apiErrorCode>;

@@ -183,6 +183,7 @@
     "INVALID_CREDENTIALS": "Identifiants incorrects.",
     "LOCKED": "Trop d'échecs : compte bloqué temporairement, réessayez dans 15 minutes.",
     "RATE_LIMITED": "Trop de requêtes, patientez un peu.",
+    "UNAVAILABLE": "fail2ban ne répond pas pour cette instance.",
     "INTERNAL": "Erreur du serveur, réessayez plus tard."
   }
 }

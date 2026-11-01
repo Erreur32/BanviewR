@@ -152,13 +152,46 @@ export function ErrorText({ children }: { children: ReactNode }) {
   );
 }
 
+const LOGO_CELLS = [4, 24, 44];
+
+// One banned cell among the others, same drawing as public/favicon.svg
+export function Logo({ size, className = '' }: { size: number; className?: string }) {
+  return (
+    <span
+      role="img"
+      aria-label="BanviewR"
+      className={`inline-flex items-center gap-2 font-mono font-semibold ${className}`}
+    >
+      <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+        {LOGO_CELLS.flatMap((y) =>
+          LOGO_CELLS.map((x) => (
+            <rect
+              key={`${x}-${y}`}
+              x={x}
+              y={y}
+              width="16"
+              height="16"
+              rx="3"
+              className={x === 44 && y === 4 ? 'fill-danger' : 'fill-muted'}
+            />
+          )),
+        )}
+      </svg>
+      <span>
+        <span className="text-muted">[</span>ban<span className="text-danger">view</span>r
+        <span className="text-muted">]</span>
+      </span>
+    </span>
+  );
+}
+
 // Centered single-card page for setup and sign-in
 export function AuthShell({ title, children }: { title: string; children: ReactNode }) {
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
-        <p className="mb-6 text-center text-2xl font-semibold tracking-tight">
-          Ban<span className="text-danger">view</span>R
+        <p className="mb-6 text-center">
+          <Logo size={30} className="text-2xl" />
         </p>
         <Card title={title}>{children}</Card>
       </div>

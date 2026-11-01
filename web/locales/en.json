@@ -183,6 +183,7 @@
     "INVALID_CREDENTIALS": "Wrong username or password.",
     "LOCKED": "Too many failures: account temporarily locked, retry in 15 minutes.",
     "RATE_LIMITED": "Too many requests, please wait a moment.",
+    "UNAVAILABLE": "fail2ban does not answer for this instance.",
     "INTERNAL": "Server error, please retry later."
   }
 }

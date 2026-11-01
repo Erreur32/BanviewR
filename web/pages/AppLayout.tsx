@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
+import { Logo } from '../components/ui.tsx';
 
 const NAV = [
   { to: '/', label: 'nav.dashboard' },
@@ -35,8 +36,8 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <aside className="border-border border-b bg-bg1 md:w-56 md:shrink-0 md:border-r md:border-b-0">
-        <p className="px-5 py-4 text-lg font-semibold tracking-tight">
-          Ban<span className="text-danger">view</span>R
+        <p className="px-5 py-4">
+          <Logo size={22} className="text-lg" />
         </p>
         <nav aria-label={t('nav.menu')} className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col">
           {[...NAV, ...(user.role === 'admin' ? ADMIN_NAV : [])].map((item) => (

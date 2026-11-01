@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { HostStatus } from '../../shared/hosts.ts';
 import { auditLog } from '../db/schema.ts';
-import { buildTestApp, pw } from '../test-utils.ts';
+import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
 const ADMIN = { username: 'admin', password: pw('hosts-admin') };
@@ -41,7 +41,7 @@ describe('instances', () => {
   it('reports an unreachable instance without failing the request', async () => {
     await app.close();
     const status: HostStatus = { reachable: false, version: null, error: 'UNREACHABLE' };
-    await start({ connect: () => ({ status: async () => status }) });
+    await start({ connect: () => fakeConnector({ status: async () => status }) });
     const { hosts } = await asAdmin('GET', '/api/hosts');
     expect(hosts[0].status).toEqual(status);
   });

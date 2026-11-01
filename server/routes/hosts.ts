@@ -6,20 +6,10 @@ import { hostBody, hostPatch, hostRow } from '../../shared/hosts.ts';
 import { audit } from '../audit.ts';
 import { canAccessHost } from '../auth/access.ts';
 import type { Db } from '../db/index.ts';
+import { getHost } from '../db/queries.ts';
 import { hosts } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
-import { ADMIN_SESSION, ok } from '../http.ts';
-
-// Reading an instance status starts a fail2ban client process
-const STATUS_RATE_LIMIT = { max: 60, timeWindow: '1 minute' };
-
-const hostParams = z.object({ hostId: z.coerce.number().int().positive() });
-
-function getHost(db: Db, id: number) {
-  const host = db.select().from(hosts).where(eq(hosts.id, id)).get();
-  if (!host) throw new AppError('NOT_FOUND', 'Instance not found');
-  return host;
-}
+import { ADMIN_SESSION, CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
 
 // Two rows on one socket would be the same fail2ban counted twice
 function assertFree(db: Db, { name, socketPath }: { name: string; socketPath: string }, ignoreId = 0) {
@@ -48,7 +38,7 @@ export const hostRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/hosts',
     {
-      config: { access: 'read', rateLimit: STATUS_RATE_LIMIT },
+      config: { access: 'read', rateLimit: CLIENT_RATE_LIMIT },
       schema: { response: { 200: okResponse({ hosts: z.array(hostRow) }) } },
     },
     async (req) => {
@@ -65,7 +55,7 @@ export const hostRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/hosts/:hostId',
     {
-      config: { access: 'read', rateLimit: STATUS_RATE_LIMIT },
+      config: { access: 'read', rateLimit: CLIENT_RATE_LIMIT },
       schema: { params: hostParams, response: { 200: okResponse({ host: hostRow }) } },
     },
     async (req) => ok({ host: await toHostRow(getHost(db, req.params.hostId)) }),
