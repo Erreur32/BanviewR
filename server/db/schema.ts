@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import type { Role, Scope } from '../../shared/auth.ts';
 
 const createdAt = () => integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`);
@@ -77,6 +77,28 @@ export const apiTokens = sqliteTable('api_tokens', {
   lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
   revokedAt: integer('revoked_at', { mode: 'timestamp' }),
 });
+
+// Long-term copy of fail2ban's bans table, which fail2ban purges. fail2ban's rowids are not
+// stable (VACUUM, purge), so a ban is identified by what it is.
+export const banEvents = sqliteTable(
+  'ban_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    hostId: integer('host_id')
+      .notNull()
+      .references(() => hosts.id, { onDelete: 'cascade' }),
+    jail: text('jail').notNull(),
+    ip: text('ip').notNull(),
+    // Unix seconds, kept as a number for the SQL time buckets
+    bannedAt: integer('banned_at').notNull(),
+    bantime: integer('bantime').notNull(),
+    failures: integer('failures').notNull(),
+  },
+  (t) => [
+    uniqueIndex('ban_events_identity').on(t.hostId, t.jail, t.ip, t.bannedAt),
+    index('ban_events_host_time').on(t.hostId, t.bannedAt),
+  ],
+);
 
 // Every change made through the UI, the API or MCP
 export const auditLog = sqliteTable('audit_log', {

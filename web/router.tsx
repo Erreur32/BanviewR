@@ -14,6 +14,7 @@ import { JailsPage } from './pages/JailsPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { PreferencesPage } from './pages/PreferencesPage.tsx';
 import { SetupPage } from './pages/SetupPage.tsx';
+import { StatsPage } from './pages/StatsPage.tsx';
 import { notify } from './stores/notificationStore.ts';
 
 export const queryClient = new QueryClient({
@@ -74,6 +75,7 @@ const appRoute = createRoute({
 const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage });
 const instancesRoute = createRoute({ getParentRoute: () => appRoute, path: '/instances', component: InstancesPage });
 const jailsRoute = createRoute({ getParentRoute: () => appRoute, path: '/jails', component: JailsPage });
+const statsRoute = createRoute({ getParentRoute: () => appRoute, path: '/stats', component: StatsPage });
 const preferencesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/preferences',
@@ -100,6 +102,7 @@ const routeTree = rootRoute.addChildren([
     dashboardRoute,
     instancesRoute,
     jailsRoute,
+    statsRoute,
     preferencesRoute,
     adminRoute.addChildren([usersRoute, tokensRoute, auditRoute]),
   ]),

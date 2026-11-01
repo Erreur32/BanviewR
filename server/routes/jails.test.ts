@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Fail2banConnector } from '../connectors/connector.ts';
-import { auditLog } from '../db/schema.ts';
+import { auditLog, banEvents } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
 import { covers } from './jails.ts';
@@ -173,6 +173,16 @@ describe('bans and stats', () => {
     expect(activeBans).toHaveBeenCalled();
     await get('/api/hosts/1/bans?active=false&limit=5');
     expect(recentBans).toHaveBeenCalledWith(5);
+  });
+
+  it('serves stats from the local history, without fail2ban', async () => {
+    await start({});
+    app.db
+      .insert(banEvents)
+      .values({ hostId: 1, jail: 'sshd', ip: '203.0.113.1', bannedAt: 1000, bantime: 600, failures: 3 })
+      .run();
+    expect((await get('/api/hosts/1/stats?days=0')).stats.totalBans).toBe(1);
+    expect((await get('/api/hosts/99/stats')).code).toBe('NOT_FOUND');
   });
 
   it('bounds the stats period', async () => {

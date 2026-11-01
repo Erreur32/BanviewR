@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Privacy promise: data stays local, no cloud, no subscription, no telemetry, nothing sent to a third party by default.
 - New logo and favicon: a 3x3 grid with one banned cell and the `[banviewr]` wordmark. The favicon follows the browser's light or dark theme.
 - API tokens can be limited to chosen instances from the token form.
+- Ban history: every minute BanviewR copies new bans of each instance to its own database, so history survives fail2ban's purge. Stays local, removed with its instance, kept with no time limit for now.
+- Statistics page: totals, bans per day and per hour in your time zone, most banned addresses, busiest jails, per instance and period. Works while fail2ban is down.
 - API for each instance: jails with their status, ban and unban (IP or network), jail start, stop and reload, active and recent bans, ban statistics. Every action goes to the audit log, failed ones included.
 - Web app: first admin setup page, sign-in page, app layout with sidebar (stacked on phones), user name, role and sign-out in the header.
 - Preferences page: language (French or English), time zone with a live preview, password change.

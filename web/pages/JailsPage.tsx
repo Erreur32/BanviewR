@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import type { BanRow, JailAction, JailRow } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser, useFormatDateTime } from '../auth.ts';
+import { HostSwitch } from '../components/HostSwitch.tsx';
 import { Badge, Button, Card, ConfirmButton, ErrorText, SelectField, Table, TextField } from '../components/ui.tsx';
 import { conflictText, errorText } from '../errors.ts';
-import { hostsQuery } from '../hosts.ts';
 import { notify } from '../stores/notificationStore.ts';
 
 const REFRESH_MS = 15_000;
@@ -249,29 +249,12 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
 export function JailsPage() {
   const { t } = useTranslation();
   const canWrite = useCurrentUser().role === 'admin';
-  const hosts = useQuery(hostsQuery);
-  const [chosen, setChosen] = useState<number | null>(null);
-  const list = hosts.data?.hosts ?? [];
-  const hostId = chosen ?? list[0]?.id;
 
   return (
     <div className="max-w-5xl space-y-4">
       <h1 className="text-xl font-semibold">{t('jails.title')}</h1>
       <p className="text-sm text-muted">{t('jails.intro')}</p>
-      <ErrorText>{hosts.error && errorText(t, hosts.error)}</ErrorText>
-      {list.length > 1 && (
-        <div className="max-w-xs">
-          <SelectField label={t('jails.instance')} value={hostId} onChange={(e) => setChosen(Number(e.target.value))}>
-            {list.map((host) => (
-              <option key={host.id} value={host.id}>
-                {host.name}
-              </option>
-            ))}
-          </SelectField>
-        </div>
-      )}
-      {/* key drops the form state and queries of the previous instance */}
-      {hostId !== undefined && <HostJails key={hostId} hostId={hostId} canWrite={canWrite} />}
+      <HostSwitch>{(hostId) => <HostJails key={hostId} hostId={hostId} canWrite={canWrite} />}</HostSwitch>
     </div>
   );
 }

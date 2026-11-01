@@ -53,13 +53,12 @@ export const banRow = z.object({
 });
 export type BanRow = z.infer<typeof banRow>;
 
-// Hours and dates are UTC, the web app converts them
 export const banStats = z.object({
   totalBans: z.number(),
   uniqueIps: z.number(),
   topIps: z.array(z.object({ ip: z.string(), count: z.number() })),
   topJails: z.array(z.object({ jail: z.string(), bans: z.number(), failures: z.number() })),
-  byHour: z.array(z.object({ hour: z.number(), bans: z.number(), failures: z.number() })),
-  byDay: z.array(z.object({ date: z.string(), bans: z.number() })),
+  // Hourly slots, `at` in unix seconds: the reader folds them in its own time zone
+  slots: z.array(z.object({ at: z.number(), bans: z.number() })),
 });
 export type BanStats = z.infer<typeof banStats>;

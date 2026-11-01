@@ -17,7 +17,8 @@
     "users": "Utilisateurs",
     "tokens": "Jetons d'API",
     "audit": "Journal d'audit",
-    "apiDocs": "Documentation API"
+    "apiDocs": "Documentation API",
+    "stats": "Statistiques"
   },
   "roles": {
     "admin": "Admin",
@@ -231,5 +232,24 @@
     "RATE_LIMITED": "Trop de requêtes, patientez un peu.",
     "UNAVAILABLE": "fail2ban ne répond pas pour cette instance.",
     "INTERNAL": "Erreur du serveur, réessayez plus tard."
+  },
+  "stats": {
+    "title": "Statistiques",
+    "intro": "Historique des bans de l'instance choisie, conservé localement par BanviewR même après la purge de fail2ban. Mis à jour chaque minute.",
+    "period": "Période",
+    "lastDays_one": "Dernier jour",
+    "lastDays_other": "{{count}} derniers jours",
+    "allTime": "Tout l'historique",
+    "empty": "Aucun ban sur cette période.",
+    "totalBans": "Bans",
+    "uniqueIps": "Adresses distinctes",
+    "perDay": "Bans par jour",
+    "perHour": "Bans par heure de la journée",
+    "peak_one": "Pic : {{label}}, {{count}} ban",
+    "peak_other": "Pic : {{label}}, {{count}} bans",
+    "barValue_one": "{{label}} : {{count}} ban",
+    "barValue_other": "{{label}} : {{count}} bans",
+    "topIps": "Adresses les plus bannies",
+    "topJails": "Jails les plus actifs"
   }
 }

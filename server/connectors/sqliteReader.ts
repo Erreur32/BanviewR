@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { BanRow, BanStats } from '../../shared/fail2ban.ts';
+import type { BanRow } from '../../shared/fail2ban.ts';
 import { AppError } from '../errors.ts';
 
 // fail2ban.sqlite3 belongs to fail2ban: always opened read-only, never migrated.
@@ -21,7 +21,7 @@ const BAN_COLUMNS = `ip, jail, timeofban, bantime, ${FAILURES} AS failures`;
 // A busy host can hold many active bans, the list stays bounded
 const MAX_ACTIVE = 5000;
 
-type RawBan = { ip: string; jail: string; timeofban: number; bantime: number; failures: number };
+export type RawBan = { ip: string; jail: string; timeofban: number; bantime: number; failures: number };
 
 const toBanRow = ({ timeofban, ...ban }: RawBan): BanRow => ({
   ...ban,
@@ -44,24 +44,13 @@ export const recentBans = (dbPath: string, limit: number) =>
     return rows.map(toBanRow);
   });
 
-// days <= 0 covers everything: `since` is then 0, older than any ban.
-// shortcut: daily buckets only, add LogviewR's 30-minute slots with the 24h chart (step 11)
-export const banStats = (dbPath: string, days: number): BanStats =>
-  withDb(dbPath, (db) => {
-    const since = days > 0 ? Math.floor(Date.now() / 1000) - days * 86400 : 0;
-    const all = <T>(sql: string) => db.prepare(sql).all(since) as T[];
-    const totals = db
-      .prepare('SELECT COUNT(*) AS totalBans, COUNT(DISTINCT ip) AS uniqueIps FROM bans WHERE timeofban >= ?')
-      .get(since) as { totalBans: number; uniqueIps: number };
-    return {
-      ...totals,
-      topIps: all(`SELECT ip, COUNT(*) AS count FROM bans WHERE timeofban >= ?
-        GROUP BY ip ORDER BY count DESC LIMIT 10`),
-      topJails: all(`SELECT jail, COUNT(*) AS bans, SUM(${FAILURES}) AS failures FROM bans WHERE timeofban >= ?
-        GROUP BY jail ORDER BY bans DESC LIMIT 10`),
-      byHour: all(`SELECT CAST(strftime('%H', timeofban, 'unixepoch') AS INTEGER) AS hour,
-        COUNT(*) AS bans, SUM(${FAILURES}) AS failures FROM bans WHERE timeofban >= ? GROUP BY hour ORDER BY hour`),
-      byDay: all(`SELECT date(timeofban, 'unixepoch') AS date, COUNT(*) AS bans FROM bans WHERE timeofban >= ?
-        GROUP BY date ORDER BY date`),
-    };
-  });
+export const bansSince = (dbPath: string, since: number, limit: number, offset: number) =>
+  withDb(
+    dbPath,
+    (db) =>
+      db
+        .prepare(
+          `SELECT ${BAN_COLUMNS} FROM bans WHERE timeofban >= ? AND ip IS NOT NULL ORDER BY timeofban, rowid LIMIT ? OFFSET ?`,
+        )
+        .all(since, limit, offset) as RawBan[],
+  );
