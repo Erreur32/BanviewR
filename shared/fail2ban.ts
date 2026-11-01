@@ -62,3 +62,10 @@ export const banStats = z.object({
   slots: z.array(z.object({ at: z.number(), bans: z.number() })),
 });
 export type BanStats = z.infer<typeof banStats>;
+
+export const threatRow = z.object({
+  ip: z.string(),
+  bans: z.number(),
+  jails: z.array(z.string()),
+  lastBanAt: z.string(),
+});

@@ -31,7 +31,7 @@ BanviewR drives the firewall of the machines it manages. Every design choice fol
 
 ## Status
 
-Early development. Instances, jails, ban and unban work; stats pages, firewall audit, blocklists, notifications and MCP are still being ported.
+Early development. Instances, jails, ban and unban, stats and MCP work; firewall audit, blocklists and notifications are still being ported.
 BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.16.0, where the fail2ban part lives today.
 
 ## Features (target for v0.1)
@@ -87,6 +87,7 @@ The web dev server proxies `/api` to the server, so only port 5185 needs to be r
 | `F2B_SOCKET`  | `/var/run/fail2ban/fail2ban.sock`    | Local fail2ban socket, seeds the first host                    |
 | `F2B_DB`      | `/var/lib/fail2ban/fail2ban.sqlite3` | Local fail2ban database, seeds the first host                  |
 | `F2B_CONF`    | `/etc/fail2ban`                      | Local fail2ban configuration folder, seeds the first host      |
+| `MCP_WRITE`   | `false`                              | Shows the MCP write tools (ban, unban, jail actions)           |
 
 Other commands:
 
@@ -106,6 +107,16 @@ curl -H "Authorization: Bearer bvr_..." http://127.0.0.1:3025/api/auth/status
 ```
 
 Tokens carry scopes (`read`, `write`, `admin`) and can be limited to some fail2ban instances.
+
+## MCP
+
+AI agents reach BanviewR with an API token, with the same scopes, instance limits and audit log as the API.
+- **HTTP:** `POST /api/mcp` (Streamable HTTP, stateless), header `Authorization: Bearer <token>`
+- **stdio:** `BANVIEWR_TOKEN=<token> npx tsx server/mcp/stdio.ts`, from the BanviewR folder with the same environment as the server
+
+Read tools (`read` scope): `list_instances`, `list_jails`, `active_bans`, `ban_history`, `ban_stats`, `active_threats`, and the `banviewr://threats` resource.
+
+Write tools (`write` scope): `ban`, `unban`, `jail_action`. They are hidden unless `MCP_WRITE=true`. An agent has no human approval step: give it a `write` token only if you accept that it can ban addresses on its own.
 
 ## Privacy
 

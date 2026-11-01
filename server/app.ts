@@ -13,10 +13,11 @@ import { authRoutes } from './routes/auth.ts';
 import { healthRoutes } from './routes/health.ts';
 import { hostRoutes } from './routes/hosts.ts';
 import { jailRoutes } from './routes/jails.ts';
+import { mcpRoutes } from './routes/mcp.ts';
 import { tokenRoutes } from './routes/tokens.ts';
 import { userRoutes } from './routes/users.ts';
 
-export type AppDeps = { connect: ConnectorFactory; detection: LocalDetection };
+export type AppDeps = { connect: ConnectorFactory; detection: LocalDetection; mcpWrite: boolean };
 
 declare module 'fastify' {
   interface FastifyInstance extends AppDeps {
@@ -31,6 +32,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
   app.decorate('db', db);
   app.decorate('connect', deps.connect);
   app.decorate('detection', deps.detection);
+  app.decorate('mcpWrite', deps.mcpWrite);
   app.addHook('onClose', async () => db.$client.close());
   registerErrorHandling(app);
 
@@ -49,6 +51,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       await api.register(auditRoutes);
       await api.register(hostRoutes);
       await api.register(jailRoutes);
+      await api.register(mcpRoutes);
     },
     { prefix: '/api' },
   );

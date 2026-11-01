@@ -31,6 +31,7 @@ export const fakeConnector = (overrides: Partial<Fail2banConnector> = {}): Fail2
 const testDeps: AppDeps = {
   connect: () => fakeConnector(),
   detection: { mode: 'none', reason: 'none' },
+  mcpWrite: false,
 };
 
 export function buildTestApp(deps: Partial<AppDeps> = {}) {
