@@ -1,0 +1,104 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readBanStats, syncBans } from './banEvents.ts';
+import type { RawBan } from './connectors/sqliteReader.ts';
+import type { Db } from './db/index.ts';
+import { banEvents, hosts } from './db/schema.ts';
+import { fakeConnector, openTestDb } from './test-utils.ts';
+
+const NOW = Math.floor(Date.now() / 1000);
+const ban = (ip: string, timeofban: number, jail = 'sshd'): RawBan => ({
+  ip,
+  jail,
+  timeofban,
+  bantime: 600,
+  failures: 3,
+});
+// Same paging as the real reader
+const source = (rows: RawBan[]) =>
+  fakeConnector({
+    bansSince: async (since, limit, offset) => rows.filter((r) => r.timeofban >= since).slice(offset, offset + limit),
+  });
+
+let db: Db;
+beforeEach(() => {
+  db = openTestDb();
+});
+afterEach(() => db.$client.close());
+
+describe('ban sync', () => {
+  it('imports everything once, then only what is new', async () => {
+    const rows = [ban('203.0.113.1', NOW - 100), ban('203.0.113.2', NOW - 50)];
+    expect(await syncBans(db, source(rows), 1)).toBe(2);
+    expect(await syncBans(db, source(rows), 1)).toBe(0);
+    rows.push(ban('203.0.113.3', NOW));
+    expect(await syncBans(db, source(rows), 1)).toBe(1);
+  });
+
+  it('reads past one page', async () => {
+    const rows = Array.from({ length: 2500 }, (_, i) => ban('203.0.113.1', NOW - 5000 + i));
+    expect(await syncBans(db, source(rows), 1)).toBe(2500);
+  });
+
+  it('asks from just before the latest ban, to catch late writes', async () => {
+    const bansSince = vi.fn(async () => []);
+    await syncBans(db, source([ban('203.0.113.1', NOW)]), 1);
+    await syncBans(db, fakeConnector({ bansSince }), 1);
+    expect(bansSince).toHaveBeenCalledWith(NOW - 300, 2000, 0);
+  });
+
+  it('keeps history after fail2ban purged it', async () => {
+    await syncBans(db, source([ban('203.0.113.1', NOW - 90 * 86400), ban('203.0.113.2', NOW)]), 1);
+    await syncBans(db, source([]), 1);
+    expect(readBanStats(db, 1, 0).totalBans).toBe(2);
+  });
+
+  it('removes the history with its instance', async () => {
+    await syncBans(db, source([ban('203.0.113.1', NOW)]), 1);
+    db.delete(hosts).run();
+    expect(db.select().from(banEvents).all()).toEqual([]);
+  });
+});
+
+describe('ban stats', () => {
+  const twoHosts = async () => {
+    const other = db
+      .insert(hosts)
+      .values({ name: 'b', socketPath: '/b', dbPath: '/b', confPath: '/b' })
+      .returning()
+      .get();
+    await syncBans(
+      db,
+      source([
+        ban('203.0.113.1', NOW - 60),
+        ban('203.0.113.1', NOW - 3 * 86400),
+        ban('203.0.113.2', NOW - 40 * 86400, 'nginx'),
+      ]),
+      1,
+    );
+    await syncBans(db, source([ban('198.51.100.1', NOW)]), other.id);
+  };
+
+  it('covers a period, for one instance', async () => {
+    await twoHosts();
+    const week = readBanStats(db, 1, 7);
+    expect(week).toMatchObject({
+      totalBans: 2,
+      uniqueIps: 1,
+      topIps: [{ ip: '203.0.113.1', count: 2 }],
+      topJails: [{ jail: 'sshd', bans: 2, failures: 6 }],
+    });
+  });
+
+  it('covers everything with hourly slots', async () => {
+    await twoHosts();
+    const all = readBanStats(db, 1, 0);
+    expect(all).toMatchObject({ totalBans: 3, uniqueIps: 2 });
+    expect(all.slots).toHaveLength(3);
+    expect(all.slots.every((s) => s.at % 3600 === 0)).toBe(true);
+    expect(all.slots[0]?.at).toBeLessThan(all.slots[2]?.at ?? 0);
+  });
+
+  it('is empty without bans', () => {
+    expect(readBanStats(db, 1, 30)).toEqual({ totalBans: 0, uniqueIps: 0, topIps: [], topJails: [], slots: [] });
+  });
+});

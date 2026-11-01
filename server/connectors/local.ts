@@ -4,7 +4,7 @@ import type { JailStatus } from '../../shared/fail2ban.ts';
 import { AppError } from '../errors.ts';
 import type { Fail2banConnector } from './connector.ts';
 import { readJailConfigs } from './jailConfig.ts';
-import { activeBans, banStats, recentBans } from './sqliteReader.ts';
+import { activeBans, bansSince, recentBans } from './sqliteReader.ts';
 
 const run = promisify(execFile);
 const TIMEOUT_MS = 10_000;
@@ -103,6 +103,6 @@ export function localConnector(
     },
     activeBans: async () => activeBans(host.dbPath),
     recentBans: async (limit) => recentBans(host.dbPath, limit),
-    stats: async (days) => banStats(host.dbPath, days),
+    bansSince: async (since, limit, offset) => bansSince(host.dbPath, since, limit, offset),
   };
 }

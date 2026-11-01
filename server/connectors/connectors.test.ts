@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { detectLocalFail2ban } from './detect.ts';
 import { parseDuration, readJailConfigs } from './jailConfig.ts';
 import { localConnector, parseJailList, parseJailStatus } from './local.ts';
-import { activeBans, banStats, recentBans } from './sqliteReader.ts';
+import { activeBans, bansSince, recentBans } from './sqliteReader.ts';
 
 let dir: string;
 let server: Server | undefined;
@@ -234,16 +234,19 @@ describe('fail2ban database', () => {
     expect(recentBans(fail2banDb(), 2)).toHaveLength(2);
   });
 
-  it('computes stats for a period and for everything', () => {
+  it('reads bans oldest first, page by page', () => {
     const path = fail2banDb();
-    const week = banStats(path, 7);
-    expect(week).toMatchObject({ totalBans: 2, uniqueIps: 1, topJails: [{ jail: 'sshd', bans: 2, failures: 9 }] });
-    expect(week.topIps).toEqual([{ ip: '203.0.113.1', count: 2 }]);
+    expect(bansSince(path, 0, 2, 0).map((b) => b.jail)).toEqual(['nginx', 'sshd']);
+    expect(bansSince(path, 0, 2, 2).map((b) => b.timeofban)).toEqual([NOW - 60]);
+    expect(bansSince(path, NOW - 3600, 10, 0)).toHaveLength(1);
+  });
 
-    const all = banStats(path, 0);
-    expect(all).toMatchObject({ totalBans: 3, uniqueIps: 2 });
-    expect(all.byDay).toHaveLength(3);
-    expect(all.byHour.reduce((sum, h) => sum + h.bans, 0)).toBe(3);
+  it('skips a ban without an address, it would block the sync', () => {
+    const path = fail2banDb();
+    const db = new Database(path);
+    db.prepare('INSERT INTO bans VALUES (?, NULL, ?, 600, 1, NULL)').run('sshd', NOW);
+    db.close();
+    expect(bansSince(path, NOW - 3600, 10, 0)).toHaveLength(1);
   });
 
   it('reports an unreadable database instead of an empty list', () => {

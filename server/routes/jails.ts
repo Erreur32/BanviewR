@@ -14,6 +14,7 @@ import {
   unbanTarget,
 } from '../../shared/fail2ban.ts';
 import { audit } from '../audit.ts';
+import { readBanStats } from '../banEvents.ts';
 import { getHost } from '../db/queries.ts';
 import { AppError } from '../errors.ts';
 import { CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
@@ -156,6 +157,10 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: okResponse({ stats: banStats }) },
       },
     },
-    async (req) => ok({ stats: await connector(req.params.hostId).stats(req.query.days) }),
+    // From the local history: it outlives fail2ban's purge and needs no running fail2ban
+    async (req) => {
+      getHost(app.db, req.params.hostId);
+      return ok({ stats: readBanStats(app.db, req.params.hostId, req.query.days) });
+    },
   );
 };

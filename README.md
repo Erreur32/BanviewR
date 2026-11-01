@@ -109,7 +109,7 @@ Tokens carry scopes (`read`, `write`, `admin`) and can be limited to some fail2b
 
 ## Privacy
 
-BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them, such as a webhook.
+BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them, such as a webhook. Ban history (addresses, jails, dates) is copied to BanviewR's local database and kept until the instance is removed.
 
 ## Security note
 

@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { buildApp } from './app.ts';
+import { startBanSync } from './banEvents.ts';
 import { config } from './config.ts';
 import { detectLocalFail2ban } from './connectors/detect.ts';
 import { localConnector } from './connectors/local.ts';
@@ -24,6 +25,7 @@ const app = await buildApp(
   },
 );
 app.log.info(detection, 'Local fail2ban detection');
+startBanSync(app);
 
 async function shutdown(signal: string) {
   app.log.info(`${signal} received, shutting down`);
