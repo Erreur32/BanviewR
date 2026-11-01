@@ -10,6 +10,7 @@ import { TokensPage } from './pages/admin/TokensPage.tsx';
 import { UsersPage } from './pages/admin/UsersPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { InstancesPage } from './pages/InstancesPage.tsx';
+import { JailsPage } from './pages/JailsPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { PreferencesPage } from './pages/PreferencesPage.tsx';
 import { SetupPage } from './pages/SetupPage.tsx';
@@ -72,6 +73,7 @@ const appRoute = createRoute({
 
 const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage });
 const instancesRoute = createRoute({ getParentRoute: () => appRoute, path: '/instances', component: InstancesPage });
+const jailsRoute = createRoute({ getParentRoute: () => appRoute, path: '/jails', component: JailsPage });
 const preferencesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/preferences',
@@ -97,6 +99,7 @@ const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
     dashboardRoute,
     instancesRoute,
+    jailsRoute,
     preferencesRoute,
     adminRoute.addChildren([usersRoute, tokensRoute, auditRoute]),
   ]),

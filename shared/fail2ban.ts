@@ -10,12 +10,9 @@ const notTooWide = (cidr: string) => {
   return Number(prefix) >= (address?.includes(':') ? MIN_PREFIX.v6 : MIN_PREFIX.v4);
 };
 
-export const banTarget = z.union([
-  z.ipv4(),
-  z.ipv6(),
-  z.cidrv4().refine(notTooWide, 'Network too wide'),
-  z.cidrv6().refine(notTooWide, 'Network too wide'),
-]);
+// Unbanning has no such limit: a wide ban set outside BanviewR must stay removable
+export const unbanTarget = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
+export const banTarget = unbanTarget.refine((t) => !t.includes('/') || notTooWide(t), 'Network too wide');
 
 export const jailAction = z.enum(['start', 'stop', 'reload']);
 export type JailAction = z.infer<typeof jailAction>;

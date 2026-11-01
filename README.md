@@ -17,6 +17,7 @@
 ## Philosophy
 
 BanviewR drives the firewall of the machines it manages. Every design choice follows from that.
+- **Private by design.** Your data stays on your machines, in a local SQLite database. No cloud, no account with us, no subscription, no telemetry. BanviewR contacts no third-party service by default: anything that has to reach outside (blocklist downloads, IP information, webhooks) stays off until you turn it on, and says what it sends and where.
 - **Safe by default.** The server listens on loopback only, there is no default password, passwords are hashed with argon2id, and sessions and API tokens are stored as hashes only. A route that does not declare its access level is admin only: forgetting fails closed, not open.
 - **Least privilege.** `viewer` accounts and `read` tokens can look but never change anything, whether from the UI, the API or MCP. A token can be limited to some fail2ban instances.
 - **The host's fail2ban comes first.** When fail2ban is already installed on a machine, BanviewR drives it and never starts its own. The embedded fail2ban is only offered where none exists, and the two never run at the same time.
@@ -30,7 +31,7 @@ BanviewR drives the firewall of the machines it manages. Every design choice fol
 
 ## Status
 
-Early bootstrap. The dev stack runs, the fail2ban features are not ported yet.
+Early development. Instances, jails, ban and unban work; stats pages, firewall audit, blocklists, notifications and MCP are still being ported.
 BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.16.0, where the fail2ban part lives today.
 
 ## Features (target for v0.1)
@@ -104,6 +105,10 @@ curl -H "Authorization: Bearer bvr_..." http://127.0.0.1:3025/api/auth/status
 ```
 
 Tokens carry scopes (`read`, `write`, `admin`) and can be limited to some fail2ban instances.
+
+## Privacy
+
+BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them, such as a webhook.
 
 ## Security note
 
