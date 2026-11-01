@@ -52,7 +52,7 @@ describe('jails', () => {
     await start({ ban });
     expect((await post('/api/hosts/1/jails/sshd/ban', { target: '2001:db8::1' })).ok).toBe(true);
     expect((await post('/api/hosts/1/jails/sshd/ban', { target: '203.0.113.0/24' })).ok).toBe(true);
-    for (const target of ['--help', 'example.com', '203.0.113.7; reboot', '']) {
+    for (const target of ['--help', 'example.com', '203.0.113.7; reboot', '', '0.0.0.0/0', '10.0.0.0/7', '::/0']) {
       expect((await post('/api/hosts/1/jails/sshd/ban', { target })).code).toBe('VALIDATION');
     }
     expect(ban).toHaveBeenCalledTimes(2);

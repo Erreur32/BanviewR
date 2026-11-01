@@ -10,7 +10,7 @@ export const idParams = z.object({ id: z.coerce.number().int().positive() });
 
 export const hostParams = z.object({ hostId: z.coerce.number().int().positive() });
 
-// Every call starts fail2ban client processes on the server
+// Every call starts fail2ban client processes or reads a database that can be large
 export const CLIENT_RATE_LIMIT = { max: 60, timeWindow: '1 minute' };
 
 // Routes a leaked admin token must not reach

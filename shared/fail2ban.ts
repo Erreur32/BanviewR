@@ -3,7 +3,19 @@ import { z } from 'zod';
 // Passed to fail2ban-client as an argument: the first character rules out option-like names
 export const jailName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,63}$/, 'Invalid jail name');
 
-export const banTarget = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
+// A very wide network would cut the host off from the world, its admins included
+const MIN_PREFIX = { v4: 8, v6: 16 };
+const notTooWide = (cidr: string) => {
+  const [address, prefix] = cidr.split('/');
+  return Number(prefix) >= (address?.includes(':') ? MIN_PREFIX.v6 : MIN_PREFIX.v4);
+};
+
+export const banTarget = z.union([
+  z.ipv4(),
+  z.ipv6(),
+  z.cidrv4().refine(notTooWide, 'Network too wide'),
+  z.cidrv6().refine(notTooWide, 'Network too wide'),
+]);
 
 export const jailAction = z.enum(['start', 'stop', 'reload']);
 export type JailAction = z.infer<typeof jailAction>;

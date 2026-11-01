@@ -78,7 +78,7 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/hosts/:hostId/bans',
     {
-      config: { access: 'read' },
+      config: READ,
       schema: {
         params: hostParams,
         // active: bans running now, otherwise the latest ones, expired or not
@@ -99,7 +99,7 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/hosts/:hostId/stats',
     {
-      config: { access: 'read' },
+      config: READ,
       schema: {
         params: hostParams,
         // 0 = everything

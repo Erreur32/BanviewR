@@ -7,6 +7,8 @@ import { activeBans, banStats, recentBans } from './sqliteReader.ts';
 
 const run = promisify(execFile);
 const TIMEOUT_MS = 10_000;
+// A jail fed by a blocklist can list tens of thousands of addresses
+const MAX_OUTPUT = 16 * 1024 * 1024;
 
 // Each client is a Python process and the socket serves them one at a time
 const MAX_CLIENTS = 5;
@@ -55,7 +57,7 @@ export function localConnector(
   client = 'fail2ban-client',
 ): Fail2banConnector {
   const exec = (args: string[]) =>
-    limited(() => run(client, ['-s', host.socketPath, ...args], { timeout: TIMEOUT_MS }));
+    limited(() => run(client, ['-s', host.socketPath, ...args], { timeout: TIMEOUT_MS, maxBuffer: MAX_OUTPUT }));
 
   // The client's error text stays out of the response, it can hold server paths
   async function command(args: string[]) {
