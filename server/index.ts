@@ -5,7 +5,11 @@ import { detectLocalFail2ban } from './connectors/detect.ts';
 import { localConnector } from './connectors/local.ts';
 import { openDb } from './db/index.ts';
 
-const db = openDb(join(config.dataDir, 'banviewr.db'), { socketPath: config.f2bSocket, dbPath: config.f2bDb });
+const db = openDb(join(config.dataDir, 'banviewr.db'), {
+  socketPath: config.f2bSocket,
+  dbPath: config.f2bDb,
+  confPath: config.f2bConf,
+});
 
 const detection = await detectLocalFail2ban(config.f2bSocket);
 

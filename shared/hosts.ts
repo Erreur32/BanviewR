@@ -12,6 +12,7 @@ export const hostBody = z.object({
   name: z.string().trim().min(1).max(64),
   socketPath: absolutePath,
   dbPath: absolutePath,
+  confPath: absolutePath,
 });
 
 export const hostPatch = hostBody.partial().refine((p) => Object.keys(p).length > 0, 'Nothing to change');
@@ -29,6 +30,7 @@ export const hostRow = z.object({
   mode: z.enum(['external', 'embedded']),
   socketPath: z.string(),
   dbPath: z.string(),
+  confPath: z.string(),
   createdAt: z.string(),
   status: hostStatus,
 });

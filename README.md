@@ -86,6 +86,7 @@ The web dev server proxies `/api` to the server, so only port 5185 needs to be r
 | `DATA_DIR`    | `./data`                             | SQLite database (`banviewr.db`)                                |
 | `F2B_SOCKET`  | `/var/run/fail2ban/fail2ban.sock`    | Local fail2ban socket, seeds the first host                    |
 | `F2B_DB`      | `/var/lib/fail2ban/fail2ban.sqlite3` | Local fail2ban database, seeds the first host                  |
+| `F2B_CONF`    | `/etc/fail2ban`                      | Local fail2ban configuration folder, seeds the first host      |
 
 Other commands:
 

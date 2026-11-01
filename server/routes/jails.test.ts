@@ -99,6 +99,44 @@ describe('jails', () => {
   });
 });
 
+describe('jail list', () => {
+  const config = (name: string, enabled: boolean) => ({
+    name,
+    enabled,
+    filter: null,
+    bantime: 600,
+    findtime: null,
+    maxretry: null,
+  });
+  const status = {
+    currentlyFailed: 0,
+    totalFailed: 0,
+    currentlyBanned: 1,
+    totalBanned: 1,
+    bannedIps: [],
+    fileList: '',
+  };
+
+  it('adds stopped jails from the config, not disabled ones', async () => {
+    await start({
+      listJails: async () => [{ name: 'sshd', ...status }],
+      jailConfigs: async () => [config('sshd', true), config('nginx', true), config('old', false)],
+    });
+    const { jails } = await get('/api/hosts/1/jails');
+    expect(jails.map((j: { name: string; running: boolean }) => [j.name, j.running])).toEqual([
+      ['sshd', true],
+      ['nginx', false],
+    ]);
+    expect(jails[0].config.bantime).toBe(600);
+  });
+
+  it('keeps a running jail the config does not describe', async () => {
+    await start({ listJails: async () => [{ name: 'sshd', ...status }], jailConfigs: async () => [] });
+    const { jails } = await get('/api/hosts/1/jails');
+    expect(jails[0]).toMatchObject({ name: 'sshd', running: true, config: null });
+  });
+});
+
 describe('own address', () => {
   it('refuses to ban the address of the caller, alone or in a network', async () => {
     const ban = vi.fn(async () => {});
@@ -151,7 +189,9 @@ describe('access', () => {
     const readOnly = await tokenFor({ scopes: ['read'] });
     expect((await withToken(readOnly, '/api/hosts/1/jails/sshd/ban', payload)).code).toBe('FORBIDDEN');
 
-    const other = (await post('/api/hosts', { name: 'b', socketPath: '/run/b.sock', dbPath: '/var/b.db' })).host;
+    const other = (
+      await post('/api/hosts', { name: 'b', socketPath: '/run/b.sock', dbPath: '/var/b.db', confPath: '/etc/b' })
+    ).host;
     const limited = await tokenFor({ scopes: ['write'], hostIds: [other.id] });
     expect((await withToken(limited, '/api/hosts/1/jails/sshd/ban', payload)).code).toBe('FORBIDDEN');
     expect((await withToken(limited, `/api/hosts/${other.id}/jails/sshd/ban`, payload)).ok).toBe(true);

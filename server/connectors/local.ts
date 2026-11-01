@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import type { JailStatus } from '../../shared/fail2ban.ts';
 import { AppError } from '../errors.ts';
 import type { Fail2banConnector } from './connector.ts';
+import { readJailConfigs } from './jailConfig.ts';
 import { activeBans, banStats, recentBans } from './sqliteReader.ts';
 
 const run = promisify(execFile);
@@ -53,7 +54,7 @@ export function parseJailStatus(name: string, output: string): JailStatus {
 
 // Talks to a fail2ban on this machine through its own client, its instance socket and its database
 export function localConnector(
-  host: { socketPath: string; dbPath: string },
+  host: { socketPath: string; dbPath: string; confPath: string },
   client = 'fail2ban-client',
 ): Fail2banConnector {
   const exec = (args: string[]) =>
@@ -86,6 +87,7 @@ export function localConnector(
       }
     },
     jail,
+    jailConfigs: async () => readJailConfigs(host.confPath),
     listJails: async () => Promise.all(parseJailList(await command(['status'])).map(jail)),
     ban: async (name, target) => void (await command(['set', name, 'banip', target])),
     unban: async (name, target) => void (await command(['set', name, 'unbanip', target])),

@@ -174,7 +174,9 @@
     "saved": "Instance {{name}} saved.",
     "deleted": "Instance {{name}} removed. Fail2ban and its bans are not touched.",
     "conflict": "This name or socket is already used by another instance.",
-    "lastInstance": "The last instance cannot be removed."
+    "lastInstance": "The last instance cannot be removed.",
+    "confPath": "Configuration folder",
+    "confHint": "Absolute path, for example /etc/fail2ban."
   },
   "jails": {
     "title": "Jails",
@@ -185,7 +187,6 @@
     "totalBanned": "Total bans",
     "failed": "Current failures",
     "reload": "Reload",
-    "reloaded": "Jail {{name}} reloaded.",
     "empty": "No running jail on this instance.",
     "banTitle": "Ban an address",
     "target": "IP address or network",
@@ -202,7 +203,21 @@
     "failures": "Failures",
     "unban": "Unban",
     "unbanned": "{{target}} unbanned.",
-    "noBans": "No current ban."
+    "noBans": "No current ban.",
+    "stopped": "stopped",
+    "stop": "Stop",
+    "start": "Start",
+    "bantime": "Ban time",
+    "maxretry": "Retries",
+    "days": "{{count}} d",
+    "hours": "{{count}} h",
+    "minutes": "{{count}} min",
+    "seconds": "{{count}} s",
+    "done": {
+      "start": "Jail {{name}} started.",
+      "stop": "Jail {{name}} stopped. Its bans no longer apply and come back when it restarts.",
+      "reload": "Jail {{name}} reloaded."
+    }
   },
   "errors": {
     "VALIDATION": "Invalid data.",

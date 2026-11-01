@@ -14,6 +14,7 @@ export const hosts = sqliteTable('hosts', {
     .default('external'),
   socketPath: text('socket_path').notNull(),
   dbPath: text('db_path').notNull(),
+  confPath: text('conf_path').notNull().default('/etc/fail2ban'),
   createdAt: createdAt(),
 });
 

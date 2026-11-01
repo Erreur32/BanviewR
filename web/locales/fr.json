@@ -174,7 +174,9 @@
     "saved": "Instance {{name}} enregistrée.",
     "deleted": "Instance {{name}} retirée. Fail2ban et ses bans ne sont pas touchés.",
     "conflict": "Ce nom ou ce socket est déjà utilisé par une autre instance.",
-    "lastInstance": "La dernière instance ne peut pas être retirée."
+    "lastInstance": "La dernière instance ne peut pas être retirée.",
+    "confPath": "Dossier de configuration",
+    "confHint": "Chemin absolu, par exemple /etc/fail2ban."
   },
   "jails": {
     "title": "Jails",
@@ -185,7 +187,6 @@
     "totalBanned": "Bans au total",
     "failed": "Échecs en cours",
     "reload": "Recharger",
-    "reloaded": "Jail {{name}} rechargé.",
     "empty": "Aucun jail actif sur cette instance.",
     "banTitle": "Bannir une adresse",
     "target": "Adresse IP ou réseau",
@@ -202,7 +203,21 @@
     "failures": "Échecs",
     "unban": "Débannir",
     "unbanned": "{{target}} débanni.",
-    "noBans": "Aucun ban en cours."
+    "noBans": "Aucun ban en cours.",
+    "stopped": "arrêté",
+    "stop": "Arrêter",
+    "start": "Démarrer",
+    "bantime": "Durée de ban",
+    "maxretry": "Essais",
+    "days": "{{count}} j",
+    "hours": "{{count}} h",
+    "minutes": "{{count}} min",
+    "seconds": "{{count}} s",
+    "done": {
+      "start": "Jail {{name}} démarré.",
+      "stop": "Jail {{name}} arrêté. Ses bans ne s'appliquent plus et reviendront à son redémarrage.",
+      "reload": "Jail {{name}} rechargé."
+    }
   },
   "errors": {
     "VALIDATION": "Données invalides.",

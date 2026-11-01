@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { TFunction } from 'i18next';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BanRow, JailStatus } from '../../shared/fail2ban.ts';
+import type { BanRow, JailAction, JailRow } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser, useFormatDateTime } from '../auth.ts';
 import { Badge, Button, Card, ConfirmButton, ErrorText, SelectField, Table, TextField } from '../components/ui.tsx';
@@ -24,7 +25,7 @@ function useRefreshHost(hostId: number) {
   };
 }
 
-function BanForm({ hostId, jails }: { hostId: number; jails: JailStatus[] }) {
+function BanForm({ hostId, jails }: { hostId: number; jails: JailRow[] }) {
   const { t } = useTranslation();
   const refresh = useRefreshHost(hostId);
   const [jail, setJail] = useState('');
@@ -74,13 +75,23 @@ function BanForm({ hostId, jails }: { hostId: number; jails: JailStatus[] }) {
   );
 }
 
-function JailRow({ hostId, jail, canWrite }: { hostId: number; jail: JailStatus; canWrite: boolean }) {
+// 600 -> 10 min, 3600 -> 1 h, 86400 -> 1 d
+function formatDuration(t: TFunction, seconds: number | null | undefined) {
+  if (seconds === null || seconds === undefined) return '';
+  if (seconds < 0) return t('jails.permanent');
+  if (seconds % 86400 === 0) return t('jails.days', { count: seconds / 86400 });
+  if (seconds % 3600 === 0) return t('jails.hours', { count: seconds / 3600 });
+  if (seconds % 60 === 0) return t('jails.minutes', { count: seconds / 60 });
+  return t('jails.seconds', { count: seconds });
+}
+
+function JailRowView({ hostId, jail, canWrite }: { hostId: number; jail: JailRow; canWrite: boolean }) {
   const { t } = useTranslation();
   const refresh = useRefreshHost(hostId);
-  const reload = useMutation({
-    mutationFn: () => api.post(`/hosts/${hostId}/jails/${jail.name}/reload`),
-    onSuccess: () => {
-      notify('success', t('jails.reloaded', { name: jail.name }));
+  const act = useMutation({
+    mutationFn: (action: JailAction) => api.post(`/hosts/${hostId}/jails/${jail.name}/${action}`),
+    onSuccess: (_, action) => {
+      notify('success', t(`jails.done.${action}`, { name: jail.name }));
       refresh();
     },
     onError: (err: Error) => notify('error', errorText(t, err)),
@@ -88,18 +99,41 @@ function JailRow({ hostId, jail, canWrite }: { hostId: number; jail: JailStatus;
 
   return (
     <tr>
-      <td className="font-medium">{jail.name}</td>
+      <td className="font-medium">
+        {jail.name} {!jail.running && <Badge>{t('jails.stopped')}</Badge>}
+      </td>
       <td>
         <Badge tone={jail.currentlyBanned > 0 ? 'danger' : 'neutral'}>{jail.currentlyBanned}</Badge>
       </td>
       <td className="text-muted">{jail.totalBanned}</td>
       <td className="text-muted">{jail.currentlyFailed}</td>
+      <td className="whitespace-nowrap text-muted">{formatDuration(t, jail.config?.bantime)}</td>
+      <td className="text-muted">{jail.config?.maxretry}</td>
       <td>
         {canWrite && (
-          <div className="flex justify-end">
-            <Button variant="secondary" size="sm" onClick={() => reload.mutate()} disabled={reload.isPending}>
-              {t('jails.reload')}
-            </Button>
+          <div className="flex justify-end gap-2">
+            {jail.running ? (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => act.mutate('reload')} disabled={act.isPending}>
+                  {t('jails.reload')}
+                </Button>
+                {/* Only with a config: without one, a stopped jail could not come back */}
+                {jail.config && (
+                  <ConfirmButton
+                    size="sm"
+                    confirmLabel={t('common.confirm')}
+                    onConfirm={() => act.mutate('stop')}
+                    disabled={act.isPending}
+                  >
+                    {t('jails.stop')}
+                  </ConfirmButton>
+                )}
+              </>
+            ) : (
+              <Button size="sm" onClick={() => act.mutate('start')} disabled={act.isPending}>
+                {t('jails.start')}
+              </Button>
+            )}
           </div>
         )}
       </td>
@@ -152,7 +186,7 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
   const { t } = useTranslation();
   const jails = useQuery({
     queryKey: jailsKey(hostId),
-    queryFn: () => api.get<{ jails: JailStatus[] }>(`/hosts/${hostId}/jails`),
+    queryFn: () => api.get<{ jails: JailRow[] }>(`/hosts/${hostId}/jails`),
     refetchInterval: REFRESH_MS,
   });
   const bans = useQuery({
@@ -160,6 +194,7 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
     queryFn: () => api.get<{ bans: BanRow[] }>(`/hosts/${hostId}/bans`),
     refetchInterval: REFRESH_MS,
   });
+  const running = jails.data?.jails.filter((j) => j.running) ?? [];
 
   return (
     <>
@@ -169,13 +204,23 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
         (jails.data.jails.length === 0 ? (
           <p className="text-sm text-muted">{t('jails.empty')}</p>
         ) : (
-          <Table columns={[t('jails.name'), t('jails.banned'), t('jails.totalBanned'), t('jails.failed'), '']}>
+          <Table
+            columns={[
+              t('jails.name'),
+              t('jails.banned'),
+              t('jails.totalBanned'),
+              t('jails.failed'),
+              t('jails.bantime'),
+              t('jails.maxretry'),
+              '',
+            ]}
+          >
             {jails.data.jails.map((jail) => (
-              <JailRow key={jail.name} hostId={hostId} jail={jail} canWrite={canWrite} />
+              <JailRowView key={jail.name} hostId={hostId} jail={jail} canWrite={canWrite} />
             ))}
           </Table>
         ))}
-      {canWrite && jails.data && jails.data.jails.length > 0 && <BanForm hostId={hostId} jails={jails.data.jails} />}
+      {canWrite && running.length > 0 && <BanForm hostId={hostId} jails={running} />}
 
       <h2 className="pt-2 text-base font-semibold">{t('jails.bansTitle')}</h2>
       <ErrorText>{bans.error && errorText(t, bans.error)}</ErrorText>
@@ -187,7 +232,13 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
             columns={[t('jails.ip'), t('jails.jail'), t('jails.bannedAt'), t('jails.expires'), t('jails.failures'), '']}
           >
             {bans.data.bans.map((ban) => (
-              <BanRowView key={`${ban.jail}-${ban.ip}`} hostId={hostId} ban={ban} canWrite={canWrite} />
+              <BanRowView
+                key={`${ban.jail}-${ban.ip}`}
+                hostId={hostId}
+                ban={ban}
+                // fail2ban only unbans from a running jail
+                canWrite={canWrite && running.some((j) => j.name === ban.jail)}
+              />
             ))}
           </Table>
         ))}

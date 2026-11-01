@@ -9,7 +9,7 @@ export type Db = ReturnType<typeof openDb>;
 
 const migrationsFolder = join(import.meta.dirname, 'migrations');
 
-export function openDb(file: string, localHost: { socketPath: string; dbPath: string }) {
+export function openDb(file: string, localHost: { socketPath: string; dbPath: string; confPath: string }) {
   if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
   const sqlite = new Database(file);
   sqlite.pragma('journal_mode = WAL');
