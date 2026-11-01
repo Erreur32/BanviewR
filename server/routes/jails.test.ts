@@ -4,6 +4,7 @@ import type { Fail2banConnector } from '../connectors/connector.ts';
 import { auditLog } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
+import { covers } from './jails.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
 const ADMIN = { username: 'admin', password: pw('jails-admin') };
@@ -87,6 +88,33 @@ describe('jails', () => {
   it('answers NOT_FOUND for an unknown instance', async () => {
     await start({ listJails: async () => [] });
     expect((await get('/api/hosts/99/jails')).code).toBe('NOT_FOUND');
+  });
+});
+
+describe('own address', () => {
+  it('refuses to ban the address of the caller, alone or in a network', async () => {
+    const ban = vi.fn(async () => {});
+    await start({ ban });
+    const banFrom = (target: string) =>
+      app
+        .inject({
+          method: 'POST',
+          url: '/api/hosts/1/jails/sshd/ban',
+          remoteAddress: '198.51.100.9',
+          headers: { ...ORIGIN, cookie },
+          payload: { target },
+        })
+        .then((r) => r.json().result);
+    expect((await banFrom('198.51.100.9')).code).toBe('CONFLICT');
+    expect((await banFrom('198.51.100.0/24')).code).toBe('CONFLICT');
+    expect((await banFrom('198.51.101.0/24')).ok).toBe(true);
+    expect(ban).toHaveBeenCalledTimes(1);
+  });
+
+  it('matches IPv6 and IPv4-mapped clients', () => {
+    expect(covers('2001:db8::/32', '2001:db8::1')).toBe(true);
+    expect(covers('203.0.113.0/24', '::ffff:203.0.113.5')).toBe(true);
+    expect(covers('2001:db8::/32', '203.0.113.5')).toBe(false);
   });
 });
 

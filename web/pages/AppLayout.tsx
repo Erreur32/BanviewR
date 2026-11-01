@@ -8,6 +8,7 @@ import { Logo } from '../components/ui.tsx';
 const NAV = [
   { to: '/', label: 'nav.dashboard' },
   { to: '/instances', label: 'nav.instances' },
+  { to: '/jails', label: 'nav.jails' },
   { to: '/preferences', label: 'nav.preferences' },
 ] as const;
 

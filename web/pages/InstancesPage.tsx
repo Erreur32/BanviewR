@@ -1,19 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { TFunction } from 'i18next';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { HealthResult } from '../../shared/api.ts';
 import type { HostRow } from '../../shared/hosts.ts';
-import { ApiError, api } from '../api.ts';
+import { api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
 import { Badge, Button, Card, ConfirmButton, ErrorText, Table, TextField } from '../components/ui.tsx';
-import { errorText } from '../errors.ts';
+import { conflictText, errorText } from '../errors.ts';
 import { hostsQuery } from '../hosts.ts';
 import { notify } from '../stores/notificationStore.ts';
-
-// The generic CONFLICT text does not say what to change
-const conflictText = (t: TFunction, err: Error, key: string) =>
-  err instanceof ApiError && err.code === 'CONFLICT' ? t(key) : errorText(t, err);
 
 function DetectionCard() {
   const { t } = useTranslation();

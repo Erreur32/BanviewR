@@ -1,3 +1,4 @@
+import { BlockList, isIP } from 'node:net';
 import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -5,11 +6,23 @@ import { okResponse } from '../../shared/api.ts';
 import { banRow, banStats, banTarget, jailAction, jailName, jailStatus } from '../../shared/fail2ban.ts';
 import { audit } from '../audit.ts';
 import { getHost } from '../db/queries.ts';
+import { AppError } from '../errors.ts';
 import { CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
 
 const jailParams = hostParams.extend({ jail: jailName });
 const WRITE = { access: 'write', rateLimit: CLIENT_RATE_LIMIT } as const;
 const READ = { access: 'read', rateLimit: CLIENT_RATE_LIMIT } as const;
+
+const family = (ip: string) => (isIP(ip) === 6 ? 'ipv6' : 'ipv4');
+
+// BlockList also matches IPv4 rules against IPv4-mapped IPv6 clients
+export function covers(target: string, ip: string) {
+  const [address = '', prefix] = target.split('/');
+  const list = new BlockList();
+  if (prefix) list.addSubnet(address, Number(prefix), family(address));
+  else list.addAddress(address, family(address));
+  return list.check(ip, family(ip));
+}
 
 export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
   const connector = (hostId: number) => app.connect(getHost(app.db, hostId));
@@ -52,6 +65,8 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
       async (req) => {
         const { hostId, jail } = req.params;
         const { target } = req.body;
+        // Whoever bans their own address loses the UI and has to fix it from the machine
+        if (verb === 'ban' && covers(target, req.ip)) throw new AppError('CONFLICT', 'This would ban your own address');
         await audited(req, { action: `jail.${verb}`, hostId, target, detail: jail }, () =>
           connector(hostId)[verb](jail, target),
         );

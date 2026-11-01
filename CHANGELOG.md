@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Each user picks the time zone used to show dates (default: the browser's).
 - fail2ban instances: list with live status (connected and version, unreachable, client missing), add, edit and remove from the new Instances page. Removing an instance never touches fail2ban or its bans.
 - Startup check for a fail2ban on the machine (socket, process, systemd service). The result and its reason show on the Instances page and in `/api/health`.
+- Jails page: running jails, ban and unban, reload, current bans, per instance. Banning your own address is refused, and so are very wide networks.
+- Privacy promise: data stays local, no cloud, no subscription, no telemetry, nothing sent to a third party by default.
 - New logo and favicon: a 3x3 grid with one banned cell and the `[banviewr]` wordmark. The favicon follows the browser's light or dark theme.
 - API tokens can be limited to chosen instances from the token form.
 - API for each instance: jails with their status, ban and unban (IP or network), jail start, stop and reload, active and recent bans, ban statistics. Every action goes to the audit log, failed ones included.
