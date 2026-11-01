@@ -2,6 +2,7 @@ import cookie from '@fastify/cookie';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Role, Scope } from '../../shared/auth.ts';
 import type { Db } from '../db/index.ts';
+import type { apiTokens } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { resolveApiToken } from './apiTokens.ts';
 import { resolveSession, SESSION_COOKIE, SESSION_TTL_MS } from './sessions.ts';
@@ -47,11 +48,19 @@ export function clearSessionCookie(reply: FastifyReply) {
   reply.clearCookie(SESSION_COOKIE, { path: '/' });
 }
 
+export const tokenPrincipal = (token: typeof apiTokens.$inferSelect): Principal => ({
+  kind: 'token',
+  id: token.id,
+  name: token.name,
+  scopes: token.scopes,
+  hostIds: token.hostIds,
+});
+
 function resolvePrincipal(db: Db, req: FastifyRequest, reply: FastifyReply): Principal | null {
   const header = req.headers.authorization;
   if (header) {
     const token = header.startsWith('Bearer ') ? resolveApiToken(db, header.slice(7).trim()) : null;
-    return token && { kind: 'token', id: token.id, name: token.name, scopes: token.scopes, hostIds: token.hostIds };
+    return token && tokenPrincipal(token);
   }
 
   const cookieToken = req.cookies[SESSION_COOKIE];

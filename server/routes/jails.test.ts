@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Fail2banConnector } from '../connectors/connector.ts';
 import { auditLog, banEvents } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
+import { covers } from '../jailOps.ts';
 import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
-import { covers } from './jails.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
 const ADMIN = { username: 'admin', password: pw('jails-admin') };

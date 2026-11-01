@@ -14,6 +14,8 @@ const envSchema = z.object({
   F2B_SOCKET: z.string().min(1).default('/var/run/fail2ban/fail2ban.sock'),
   F2B_DB: z.string().min(1).default('/var/lib/fail2ban/fail2ban.sqlite3'),
   F2B_CONF: z.string().min(1).default('/etc/fail2ban'),
+  // Write tools stay hidden from every MCP client unless switched on
+  MCP_WRITE: z.stringbool().default(false),
 });
 
 function loadConfig() {
@@ -32,6 +34,7 @@ function loadConfig() {
     f2bSocket: env.F2B_SOCKET,
     f2bDb: env.F2B_DB,
     f2bConf: env.F2B_CONF,
+    mcpWrite: env.MCP_WRITE,
   };
 }
 

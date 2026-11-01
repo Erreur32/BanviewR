@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New logo and favicon: a 3x3 grid with one banned cell and the `[banviewr]` wordmark. The favicon follows the browser's light or dark theme.
 - API tokens can be limited to chosen instances from the token form.
 - Ban history: every minute BanviewR copies new bans of each instance to its own database, so history survives fail2ban's purge. Stays local, removed with its instance, kept with no time limit for now.
+- MCP server for AI agents, over HTTP (`/api/mcp`) and stdio, with API tokens: scopes, instance limits and audit log as in the API. Read tools for instances, jails, bans, history, stats and threats. Write tools stay hidden unless `MCP_WRITE=true`.
+- API: `/api/hosts/:hostId/history` to search the ban history, `/api/hosts/:hostId/threats` for addresses banned several times.
 - Statistics page: totals, bans per day and per hour in your time zone, most banned addresses, busiest jails, per instance and period. Works while fail2ban is down.
 - API for each instance: jails with their status, ban and unban (IP or network), jail start, stop and reload, active and recent bans, ban statistics. Every action goes to the audit log, failed ones included.
 - Web app: first admin setup page, sign-in page, app layout with sidebar (stacked on phones), user name, role and sign-out in the header.

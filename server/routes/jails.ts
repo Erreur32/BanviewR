@@ -1,5 +1,3 @@
-import { BlockList, isIP } from 'node:net';
-import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { okResponse } from '../../shared/api.ts';
@@ -11,73 +9,25 @@ import {
   jailName,
   jailRow,
   jailStatus,
+  threatRow,
   unbanTarget,
 } from '../../shared/fail2ban.ts';
-import { audit } from '../audit.ts';
-import { readBanStats } from '../banEvents.ts';
+import { readBanHistory, readBanStats, readThreats } from '../banEvents.ts';
 import { getHost } from '../db/queries.ts';
-import { AppError } from '../errors.ts';
 import { CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
+import { changeBan, listJailRows, runJailAction } from '../jailOps.ts';
 
 const jailParams = hostParams.extend({ jail: jailName });
 const WRITE = { access: 'write', rateLimit: CLIENT_RATE_LIMIT } as const;
 const READ = { access: 'read', rateLimit: CLIENT_RATE_LIMIT } as const;
 
-const idleJail = (name: string) => ({
-  name,
-  currentlyFailed: 0,
-  totalFailed: 0,
-  currentlyBanned: 0,
-  totalBanned: 0,
-  bannedIps: [],
-  fileList: '',
-});
-
-const family = (ip: string) => (isIP(ip) === 6 ? 'ipv6' : 'ipv4');
-
-// BlockList also matches IPv4 rules against IPv4-mapped IPv6 clients
-export function covers(target: string, ip: string) {
-  const [address = '', prefix] = target.split('/');
-  const list = new BlockList();
-  if (prefix) list.addSubnet(address, Number(prefix), family(address));
-  else list.addAddress(address, family(address));
-  return list.check(ip, family(ip));
-}
-
 export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
   const connector = (hostId: number) => app.connect(getHost(app.db, hostId));
-
-  // A refused or failed action is audited too, then answered as an error
-  async function audited<T>(
-    req: FastifyRequest,
-    entry: { action: string; hostId: number; target: string; detail?: string },
-    change: () => Promise<T>,
-  ) {
-    try {
-      const result = await change();
-      audit(req, { ...entry, ok: true });
-      return result;
-    } catch (err) {
-      audit(req, { ...entry, ok: false });
-      throw err;
-    }
-  }
 
   app.get(
     '/hosts/:hostId/jails',
     { config: READ, schema: { params: hostParams, response: { 200: okResponse({ jails: z.array(jailRow) }) } } },
-    async (req) => {
-      const host = connector(req.params.hostId);
-      const [running, configs] = await Promise.all([host.listJails(), host.jailConfigs()]);
-      const configOf = (name: string) => configs.find((c) => c.name === name) ?? null;
-      const stopped = configs.filter((c) => c.enabled && !running.some((j) => j.name === c.name));
-      return ok({
-        jails: [
-          ...running.map((jail) => ({ ...jail, running: true, config: configOf(jail.name) })),
-          ...stopped.map((config) => ({ ...idleJail(config.name), running: false, config })),
-        ],
-      });
-    },
+    async (req) => ok({ jails: await listJailRows(connector(req.params.hostId)) }),
   );
 
   app.get(
@@ -99,12 +49,7 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
       },
       async (req) => {
         const { hostId, jail } = req.params;
-        const { target } = req.body;
-        // Whoever bans their own address loses the UI and has to fix it from the machine
-        if (verb === 'ban' && covers(target, req.ip)) throw new AppError('CONFLICT', 'This would ban your own address');
-        await audited(req, { action: `jail.${verb}`, hostId, target, detail: jail }, () =>
-          connector(hostId)[verb](jail, target),
-        );
+        await changeBan(app.db, req, connector(hostId), verb, { hostId, jail, target: req.body.target });
         return ok();
       },
     );
@@ -118,9 +63,7 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (req) => {
       const { hostId, jail, action } = req.params;
-      await audited(req, { action: `jail.${action}`, hostId, target: jail }, () =>
-        connector(hostId).jailAction(jail, action),
-      );
+      await runJailAction(app.db, req, connector(hostId), { hostId, jail, action });
       return ok();
     },
   );
@@ -161,6 +104,41 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
     async (req) => {
       getHost(app.db, req.params.hostId);
       return ok({ stats: readBanStats(app.db, req.params.hostId, req.query.days) });
+    },
+  );
+
+  app.get(
+    '/hosts/:hostId/history',
+    {
+      config: READ,
+      schema: {
+        params: hostParams,
+        querystring: z.object({
+          ip: z.union([z.ipv4(), z.ipv6()]).optional(),
+          limit: z.coerce.number().int().min(1).max(1000).default(100),
+        }),
+        response: { 200: okResponse({ bans: z.array(banRow) }) },
+      },
+    },
+    async (req) => {
+      getHost(app.db, req.params.hostId);
+      return ok({ bans: readBanHistory(app.db, req.params.hostId, req.query) });
+    },
+  );
+
+  app.get(
+    '/hosts/:hostId/threats',
+    {
+      config: READ,
+      schema: {
+        params: hostParams,
+        querystring: z.object({ hours: z.coerce.number().int().min(1).max(720).default(6) }),
+        response: { 200: okResponse({ threats: z.array(threatRow) }) },
+      },
+    },
+    async (req) => {
+      getHost(app.db, req.params.hostId);
+      return ok({ threats: readThreats(app.db, req.params.hostId, req.query.hours) });
     },
   );
 };

@@ -16,7 +16,7 @@ const detection = await detectLocalFail2ban(config.f2bSocket);
 
 const app = await buildApp(
   db,
-  { connect: localConnector, detection },
+  { connect: localConnector, detection, mcpWrite: config.mcpWrite },
   {
     trustProxy: config.trustProxy,
     logger: config.isDev

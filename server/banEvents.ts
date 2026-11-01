@@ -11,6 +11,7 @@ const PAGE = 2000;
 // Rows read twice are dropped by the unique index.
 const OVERLAP_S = 300;
 const TOP = 10;
+const MAX_THREATS = 100;
 
 export async function syncBans(db: Db, connector: Fail2banConnector, hostId: number) {
   const latest = db
@@ -88,4 +89,44 @@ export function readBanStats(db: Db, hostId: number, days: number): BanStats {
       .all(),
     slots: db.select({ at: slot, bans }).from(banEvents).where(inPeriod).groupBy(slot).orderBy(slot).all(),
   };
+}
+
+// Latest first, one address or all
+export function readBanHistory(db: Db, hostId: number, { ip, limit }: { ip?: string | undefined; limit: number }) {
+  return db
+    .select()
+    .from(banEvents)
+    .where(and(eq(banEvents.hostId, hostId), ip ? eq(banEvents.ip, ip) : undefined))
+    .orderBy(desc(banEvents.bannedAt))
+    .limit(limit)
+    .all()
+    .map(({ ip, jail, bannedAt, bantime, failures }) => ({
+      ip,
+      jail,
+      bannedAt: new Date(bannedAt * 1000).toISOString(),
+      bantime,
+      failures,
+    }));
+}
+
+// Addresses that came back within the window: one ban alone is routine
+export function readThreats(db: Db, hostId: number, hours: number) {
+  const since = Math.floor(Date.now() / 1000) - hours * 3600;
+  const bans = count();
+  const lastBan = max(banEvents.bannedAt);
+  return db
+    .select({ ip: banEvents.ip, bans, jails: sql<string>`GROUP_CONCAT(DISTINCT ${banEvents.jail})`, lastBan })
+    .from(banEvents)
+    .where(and(eq(banEvents.hostId, hostId), gte(banEvents.bannedAt, since)))
+    .groupBy(banEvents.ip)
+    .having(gte(bans, 2))
+    .orderBy(desc(bans))
+    .limit(MAX_THREATS)
+    .all()
+    .map((row) => ({
+      ip: row.ip,
+      bans: row.bans,
+      jails: row.jails.split(','),
+      lastBanAt: new Date((row.lastBan ?? 0) * 1000).toISOString(),
+    }));
 }
