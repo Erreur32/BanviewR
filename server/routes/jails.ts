@@ -3,7 +3,7 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { okResponse } from '../../shared/api.ts';
-import { banRow, banStats, banTarget, jailAction, jailName, jailStatus } from '../../shared/fail2ban.ts';
+import { banRow, banStats, banTarget, jailAction, jailName, jailStatus, unbanTarget } from '../../shared/fail2ban.ts';
 import { audit } from '../audit.ts';
 import { getHost } from '../db/queries.ts';
 import { AppError } from '../errors.ts';
@@ -60,7 +60,11 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
       `/hosts/:hostId/jails/:jail/${verb}`,
       {
         config: WRITE,
-        schema: { params: jailParams, body: z.object({ target: banTarget }), response: { 200: okResponse() } },
+        schema: {
+          params: jailParams,
+          body: z.object({ target: verb === 'ban' ? banTarget : unbanTarget }),
+          response: { 200: okResponse() },
+        },
       },
       async (req) => {
         const { hostId, jail } = req.params;

@@ -59,6 +59,14 @@ describe('jails', () => {
     expect(ban).toHaveBeenCalledTimes(2);
   });
 
+  it('can still lift a wide ban set outside BanviewR', async () => {
+    const unban = vi.fn(async () => {});
+    await start({ unban });
+    expect((await post('/api/hosts/1/jails/sshd/unban', { target: '0.0.0.0/0' })).ok).toBe(true);
+    expect((await post('/api/hosts/1/jails/sshd/unban', { target: '--help' })).code).toBe('VALIDATION');
+    expect(unban).toHaveBeenCalledTimes(1);
+  });
+
   it('refuses option-like jail names', async () => {
     const jail = vi.fn();
     await start({ jail });
