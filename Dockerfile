@@ -1,20 +1,20 @@
 # BanviewR, external mode: drives the host's fail2ban through its socket and database.
 # Debian trixie ships fail2ban 1.1, the client must speak the same protocol as the host server.
 
-FROM node:22-trixie AS deps
+FROM node:26-trixie AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 # The built web app is the same on every platform: built natively, not under emulation
-FROM --platform=$BUILDPLATFORM node:22-trixie AS web
+FROM --platform=$BUILDPLATFORM node:26-trixie AS web
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:22-trixie-slim
+FROM node:26-trixie-slim
 # Only fail2ban-client is used, the server is never started in this image.
 # iptables, ipset and nftables only read the host firewall for the audit.
 RUN apt-get update \
