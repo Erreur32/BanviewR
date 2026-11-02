@@ -35,11 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive API documentation at `/api/docs/` (Swagger UI), linked from the sidebar, for signed-in users and `read` tokens.
 - Geolocation from local databases: country and network operator next to banned addresses (Jails and Statistics pages), most banned countries. No address is ever sent to an online service.
 - New admin page Geolocation: state of the country and ASN databases, one-click download of DB-IP Lite (CC BY 4.0) from download.db-ip.com, or drop your own `country.mmdb` and `asn.mmdb` (DB-IP Lite or MaxMind GeoLite2) in `data/geoip/`. Nothing is downloaded without that click.
+- Ban history is kept 365 days by default, then purged (`BAN_HISTORY_DAYS`, `0` keeps everything): it holds personal data.
+- AI agents (MCP) can no longer ban private, local or link-local addresses, networks that contain them, or an address a user is signed in from. Each refusal is written to the audit log.
 - Ban map on the Statistics page: countries colored by number of bans, hover for details. Drawn by BanviewR itself, no map tiles or outside service.
 
 ### For developers
 
 - `server/geoip.ts`: reads `DATA_DIR/geoip/{country,asn}.mmdb` with `mmdb-lib` (new dependency), picks up a new file within a minute without restart. `geo` (`{ country, asn, org }` or `null`) added to bans (`locatedBan`), history, threats and top addresses; `countries` added to ban statistics. Same in the MCP tools.
+- `BAN_HISTORY_DAYS` (default 365): old `ban_events` are purged on each sync round, and the sync no longer imports bans older than the limit. `checkAgentBan()` in `server/jailOps.ts` holds the MCP ban rules.
 - `GET /api/geoip` (read) and `POST /api/geoip/download` (admin session only, 3 per 10 minutes, audited as `geoip.download`).
 - `web/world.json`: country outlines from Natural Earth 1:110m (public domain), built by `scripts/world-map.mjs`, lazy-loaded with the map.
 - GitHub Actions CI on pull requests and on main: type check, Biome, tests, `npm audit` (high and above).

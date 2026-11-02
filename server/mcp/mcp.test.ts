@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Fail2banConnector } from '../connectors/connector.ts';
-import { auditLog, banEvents } from '../db/schema.ts';
+import { auditLog, banEvents, sessions } from '../db/schema.ts';
 import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
@@ -90,13 +90,21 @@ describe('MCP over HTTP', () => {
     });
   });
 
-  it('refuses to ban the address of the caller', async () => {
+  it('refuses local, private and signed-in addresses, with an audit entry', async () => {
     const ban = vi.fn(async () => {});
     await start({ ban }, true);
+    // A user signed in from a public address
+    const userId = app.db.select().from(sessions).get()?.userId ?? 0;
+    app.db
+      .insert(sessions)
+      .values({ id: 'other', userId, expiresAt: new Date(Date.now() + 60_000), ip: '198.51.100.9', userAgent: '' })
+      .run();
     await connect(await token({ scopes: ['write'] }));
-    const res = await call('ban', { hostId: 1, jail: 'sshd', target: '127.0.0.1' });
-    expect(res.error).toContain('CONFLICT');
+    for (const target of ['127.0.0.1', '10.1.2.3', '172.0.0.0/8', '::ffff:192.168.1.1', 'fe80::1', '198.51.100.0/24']) {
+      expect((await call('ban', { hostId: 1, jail: 'sshd', target })).error, target).toContain('FORBIDDEN');
+    }
     expect(ban).not.toHaveBeenCalled();
+    expect(app.db.select().from(auditLog).all().at(-1)).toMatchObject({ action: 'jail.ban', ok: false });
   });
 
   it('keeps a limited token to its instances', async () => {

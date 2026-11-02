@@ -16,6 +16,8 @@ const envSchema = z.object({
   F2B_CONF: z.string().min(1).default('/etc/fail2ban'),
   // Write tools stay hidden from every MCP client unless switched on
   MCP_WRITE: z.stringbool().default(false),
+  // Ban history is personal data: days kept, 0 = no limit
+  BAN_HISTORY_DAYS: z.coerce.number().int().min(0).max(36500).default(365),
 });
 
 function loadConfig() {
@@ -35,6 +37,7 @@ function loadConfig() {
     f2bDb: env.F2B_DB,
     f2bConf: env.F2B_CONF,
     mcpWrite: env.MCP_WRITE,
+    banHistoryDays: env.BAN_HISTORY_DAYS,
   };
 }
 

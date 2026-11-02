@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, max, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lt, max, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { BanStats } from '../shared/fail2ban.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
@@ -14,13 +14,17 @@ const OVERLAP_S = 300;
 const TOP = 10;
 const MAX_THREATS = 100;
 
-export async function syncBans(db: Db, connector: Fail2banConnector, hostId: number) {
+// Unix seconds `days` ago, 0 for days = 0 (no limit)
+export const daysAgo = (days: number) => (days > 0 ? Math.floor(Date.now() / 1000) - days * 86400 : 0);
+
+// notBefore: bans older than the retention are not imported, or each round would bring back what the purge removed
+export async function syncBans(db: Db, connector: Fail2banConnector, hostId: number, notBefore = 0) {
   const latest = db
     .select({ at: max(banEvents.bannedAt) })
     .from(banEvents)
     .where(eq(banEvents.hostId, hostId))
     .get()?.at;
-  const since = latest ? latest - OVERLAP_S : 0;
+  const since = Math.max(latest ? latest - OVERLAP_S : 0, notBefore);
   let added = 0;
   for (let offset = 0; ; offset += PAGE) {
     const rows = await connector.bansSince(since, PAGE, offset);
@@ -32,14 +36,25 @@ export async function syncBans(db: Db, connector: Fail2banConnector, hostId: num
   }
 }
 
+export const purgeBans = (db: Db, hostId: number, before: number) =>
+  db
+    .delete(banEvents)
+    .where(and(eq(banEvents.hostId, hostId), lt(banEvents.bannedAt, before)))
+    .run().changes;
+
 // Stopped with the app. An instance that cannot be read is retried on the next round.
-export function startBanSync(app: FastifyInstance) {
+export function startBanSync(app: FastifyInstance, historyDays: number) {
   let timer: NodeJS.Timeout | undefined;
   let stopped = false;
   async function round() {
+    const cutoff = daysAgo(historyDays);
     for (const host of app.db.select().from(hosts).all()) {
+      if (cutoff > 0) {
+        const purged = purgeBans(app.db, host.id, cutoff);
+        if (purged > 0) app.log.info({ hostId: host.id, purged }, 'Old bans purged');
+      }
       try {
-        const added = await syncBans(app.db, app.connect(host), host.id);
+        const added = await syncBans(app.db, app.connect(host), host.id, cutoff);
         if (added > 0) app.log.info({ hostId: host.id, added }, 'Bans synced');
       } catch (err) {
         if (!stopped) app.log.warn({ hostId: host.id, err }, 'Ban sync failed');
@@ -58,7 +73,7 @@ export function startBanSync(app: FastifyInstance) {
 
 // days = 0 covers everything: `since` is then 0, older than any ban
 export function readBanStats(db: Db, hostId: number, days: number, locate: Locate): BanStats {
-  const since = days > 0 ? Math.floor(Date.now() / 1000) - days * 86400 : 0;
+  const since = daysAgo(days);
   const inPeriod = and(eq(banEvents.hostId, hostId), gte(banEvents.bannedAt, since));
   const bans = count();
   const failures = sql<number>`SUM(${banEvents.failures})`;

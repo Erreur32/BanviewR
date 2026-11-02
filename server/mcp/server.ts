@@ -12,7 +12,7 @@ import { getHost } from '../db/queries.ts';
 import { hosts } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { type Locate, located } from '../geoip.ts';
-import { changeBan, listJailRows, runJailAction } from '../jailOps.ts';
+import { changeBan, checkAgentBan, listJailRows, runJailAction } from '../jailOps.ts';
 
 export type McpContext = {
   db: Db;
@@ -146,11 +146,17 @@ export function buildMcpServer(ctx: McpContext) {
   // Hidden, not just refused, so a model never plans around tools it cannot use
   if (ctx.writeEnabled && hasScope(ctx.caller().principal.scopes, 'write')) {
     const banTools = [
-      { verb: 'ban', target: banTarget, description: 'Ban an address or network in a jail.' },
+      {
+        verb: 'ban',
+        target: banTarget,
+        description:
+          'Ban an address or network in a jail. Private and local addresses, and those of signed-in users, are refused.',
+      },
       { verb: 'unban', target: unbanTarget, description: 'Remove an address or network from a jail.' },
     ] as const;
     for (const { verb, target, description } of banTools) {
       tool(verb, 'write', description + WRITE_NOTE, { hostId, jail: jailName, target }, async (args, caller) => {
+        if (verb === 'ban') checkAgentBan(db, caller, args);
         await changeBan(db, caller, host(args.hostId), verb, args);
         return { ok: true };
       });
