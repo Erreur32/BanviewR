@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import type { TFunction } from 'i18next';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +17,7 @@ const REFRESH_MS = 15_000;
 const DB_WRITE_DELAY_MS = 1500;
 
 const jailsKey = (hostId: number) => ['hosts', hostId, 'jails'];
-const bansKey = (hostId: number) => ['hosts', hostId, 'bans'];
+export const bansKey = (hostId: number) => ['hosts', hostId, 'bans'];
 
 function useRefreshHost(hostId: number) {
   const queryClient = useQueryClient();
@@ -77,7 +78,16 @@ function BanForm({ hostId, jails }: { hostId: number; jails: JailRow[] }) {
 }
 
 // 600 -> 10 min, 3600 -> 1 h, 86400 -> 1 d
-function formatDuration(t: TFunction, seconds: number | null | undefined) {
+// Opens the address page: geo, current bans and full history
+export function IpLink({ hostId, ip }: { hostId: number; ip: string }) {
+  return (
+    <Link to="/hosts/$hostId/ips/$ip" params={{ hostId: String(hostId), ip }} className="text-accent hover:underline">
+      {ip}
+    </Link>
+  );
+}
+
+export function formatDuration(t: TFunction, seconds: number | null | undefined) {
   if (seconds === null || seconds === undefined) return '';
   if (seconds < 0) return t('jails.permanent');
   if (seconds % 86400 === 0) return t('jails.days', { count: seconds / 86400 });
@@ -142,7 +152,7 @@ function JailRowView({ hostId, jail, canWrite }: { hostId: number; jail: JailRow
   );
 }
 
-function BanRowView({ hostId, ban, canWrite }: { hostId: number; ban: LocatedBan; canWrite: boolean }) {
+export function BanRowView({ hostId, ban, canWrite }: { hostId: number; ban: LocatedBan; canWrite: boolean }) {
   const { t } = useTranslation();
   const formatDate = useFormatDateTime();
   const refresh = useRefreshHost(hostId);
@@ -158,7 +168,9 @@ function BanRowView({ hostId, ban, canWrite }: { hostId: number; ban: LocatedBan
 
   return (
     <tr>
-      <td className="font-mono text-xs">{ban.ip}</td>
+      <td className="font-mono text-xs">
+        <IpLink hostId={hostId} ip={ban.ip} />
+      </td>
       <td>
         <IpOrigin geo={ban.geo} />
       </td>

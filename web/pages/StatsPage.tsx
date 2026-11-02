@@ -9,6 +9,7 @@ import { CountryLabel, IpOrigin } from '../components/IpOrigin.tsx';
 import { Card, ErrorText, SelectField, Table } from '../components/ui.tsx';
 import { errorText } from '../errors.ts';
 import { foldSlots } from '../stats.ts';
+import { IpLink } from './JailsPage.tsx';
 
 const PERIODS = [7, 30, 90, 365, 0];
 // The server syncs fail2ban once a minute
@@ -169,7 +170,9 @@ function HostStats({ hostId }: { hostId: number }) {
                 <Table columns={[t('jails.ip'), t('geoip.origin'), t('jails.banned')]}>
                   {data.topIps.map((row) => (
                     <tr key={row.ip}>
-                      <td className="font-mono text-xs">{row.ip}</td>
+                      <td className="font-mono text-xs">
+                        <IpLink hostId={hostId} ip={row.ip} />
+                      </td>
                       <td>
                         <IpOrigin geo={row.geo} />
                       </td>
