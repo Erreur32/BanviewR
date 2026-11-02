@@ -18,7 +18,8 @@ function sendError(reply: FastifyReply, code: ApiErrorCode, error: string) {
   return reply.code(200).serializer(JSON.stringify).send(body);
 }
 
-export function registerErrorHandling(app: FastifyInstance) {
+// spaIndex: the web app page, sent for unknown GET paths outside /api so its router handles them
+export function registerErrorHandling(app: FastifyInstance, spaIndex?: string) {
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AppError) {
       return sendError(reply, err.code, err.message);
@@ -38,5 +39,8 @@ export function registerErrorHandling(app: FastifyInstance) {
     return sendError(reply, 'INTERNAL', 'Internal server error');
   });
 
-  app.setNotFoundHandler((req, reply) => sendError(reply, 'NOT_FOUND', `Route ${req.method} ${req.url} not found`));
+  app.setNotFoundHandler((req, reply) => {
+    if (spaIndex && req.method === 'GET' && !req.url.startsWith('/api/')) return reply.type('text/html').send(spaIndex);
+    return sendError(reply, 'NOT_FOUND', `Route ${req.method} ${req.url} not found`);
+  });
 }

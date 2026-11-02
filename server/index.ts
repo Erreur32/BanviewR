@@ -1,4 +1,5 @@
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { buildApp } from './app.ts';
 import { startBanSync } from './banEvents.ts';
 import { config } from './config.ts';
@@ -14,10 +15,18 @@ const db = openDb(join(config.dataDir, 'banviewr.db'), {
 });
 
 const detection = await detectLocalFail2ban(config.f2bSocket);
+// Vite serves the web app in development
+const webRoot = resolve('dist');
 
 const app = await buildApp(
   db,
-  { connect: localConnector, detection, mcpWrite: config.mcpWrite, geo: openGeoIp(join(config.dataDir, 'geoip')) },
+  {
+    connect: localConnector,
+    detection,
+    mcpWrite: config.mcpWrite,
+    geo: openGeoIp(join(config.dataDir, 'geoip')),
+    webRoot: !config.isDev && existsSync(webRoot) ? webRoot : undefined,
+  },
   {
     trustProxy: config.trustProxy,
     logger: config.isDev

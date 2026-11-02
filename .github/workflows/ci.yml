@@ -23,3 +23,11 @@ jobs:
       - run: npm run check
       # Moderate advisories come through @fastify/swagger-ui and have no safe fix yet
       - run: npm audit --omit=dev --audit-level=high
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # Build only, nothing is published
+      - run: docker build -t banviewr:ci .
