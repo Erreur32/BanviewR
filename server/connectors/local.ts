@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { promisify } from 'node:util';
 import type { JailStatus } from '../../shared/fail2ban.ts';
 import { AppError } from '../errors.ts';
@@ -50,6 +51,30 @@ export function parseJailStatus(name: string, output: string): JailStatus {
     bannedIps: text('Banned IP list').split(/\s+/).filter(Boolean),
     fileList: text('File list'),
   };
+}
+
+// Read-only dumps. Missing tool or no permission (not root, no NET_ADMIN in Docker) gives null.
+async function dump(cmd: string, args: string[] = []) {
+  try {
+    return (await run(cmd, args, { timeout: TIMEOUT_MS, maxBuffer: MAX_OUTPUT })).stdout;
+  } catch {
+    return null;
+  }
+}
+
+async function readFirewall() {
+  // Legacy tables exist only once their module is loaded: asking before would load it on the host
+  const legacy = existsSync('/proc/net/ip_tables_names');
+  const [ipt, ipt6, old, old6, ipset, nft] = await Promise.all([
+    dump('iptables-save'),
+    dump('ip6tables-save'),
+    legacy ? dump('iptables-legacy-save') : null,
+    legacy ? dump('ip6tables-legacy-save') : null,
+    dump('ipset', ['list', '-o', 'save']),
+    dump('nft', ['-j', 'list', 'ruleset']),
+  ]);
+  const tables = [ipt, ipt6, old, old6].filter((t) => t !== null);
+  return { iptables: tables.length ? tables.join('\n') : null, ipset, nft };
 }
 
 // Talks to a fail2ban on this machine through its own client, its instance socket and its database
@@ -104,5 +129,22 @@ export function localConnector(
     activeBans: async () => activeBans(host.dbPath),
     recentBans: async (limit) => recentBans(host.dbPath, limit),
     bansSince: async (since, limit, offset) => bansSince(host.dbPath, since, limit, offset),
+    // "The jail sshd has the following actions:" then one comma-separated line
+    jailActions: async (name) =>
+      (await command(['get', name, 'actions']))
+        .split('\n')
+        .slice(1)
+        .join(',')
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean),
+    async actionProperty(name, action, property) {
+      try {
+        return await command(['get', name, 'action', action, property]);
+      } catch {
+        return null;
+      }
+    },
+    firewall: readFirewall,
   };
 }

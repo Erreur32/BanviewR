@@ -73,6 +73,8 @@ Then open `http://127.0.0.1:3025` on that machine and create the first admin acc
 
 The container runs as root, because fail2ban's socket is root-only. It never starts a fail2ban server of its own.
 
+The firewall audit reads the host firewall (`iptables-save`, `ipset list`, `nft list ruleset`), which needs the `NET_ADMIN` capability set in `docker-compose.yml`. That capability would also let the container change the host firewall; access to fail2ban's socket already allows as much, since fail2ban runs its actions as root. Remove `cap_add` to drop the audit, the rest keeps working.
+
 ## Development
 
 Requirements: Node.js 22+.
@@ -128,7 +130,7 @@ AI agents reach BanviewR with an API token, with the same scopes, instance limit
 - **HTTP:** `POST /api/mcp` (Streamable HTTP, stateless), header `Authorization: Bearer <token>`
 - **stdio:** `BANVIEWR_TOKEN=<token> npx tsx server/mcp/stdio.ts`, from the BanviewR folder with the same environment as the server
 
-Read tools (`read` scope): `list_instances`, `list_jails`, `active_bans`, `ban_history`, `ban_stats`, `active_threats`, and the `banviewr://threats` resource.
+Read tools (`read` scope): `list_instances`, `list_jails`, `active_bans`, `ban_history`, `ban_stats`, `active_threats`, `firewall_audit`, and the `banviewr://threats` resource.
 
 Write tools (`write` scope): `ban`, `unban`, `jail_action`. They are hidden unless `MCP_WRITE=true`. An agent cannot ban private, local or link-local addresses, nor an address a user is signed in from; these refusals go to the audit log. There is still no human approval step: give it a `write` token only if you accept that it can ban public addresses on its own.
 

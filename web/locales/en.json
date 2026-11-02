@@ -20,7 +20,8 @@
     "apiDocs": "API documentation",
     "stats": "Statistics",
     "geoip": "Geolocation",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "firewall": "Firewall"
   },
   "roles": {
     "admin": "Admin",
@@ -346,5 +347,43 @@
     "disable": "Disable",
     "test": "Test",
     "testSent": "Test message sent to {{name}}."
+  },
+  "firewall": {
+    "title": "Firewall audit",
+    "intro": "Compares what fail2ban says it bans with what iptables, ipset and nftables really block. Read-only: nothing is changed.",
+    "running": "Checking...",
+    "rerun": "Check again",
+    "read": "{{backend}} read",
+    "notRead": "{{backend}} not read",
+    "unreadable": "BanviewR could not read the firewall. It needs to run as root and, in Docker, the NET_ADMIN capability (see the README).",
+    "issuesTitle_one": "{{count}} issue",
+    "issuesTitle_other": "{{count}} issues",
+    "noIssue": "No issue: the firewall matches fail2ban.",
+    "severity": "Severity",
+    "issue": "Issue",
+    "jail": "Jail",
+    "action": "Action",
+    "target": "Chain or set",
+    "jailsTitle": "Where each jail bans",
+    "noAction": "no action",
+    "notChecked": "not checked",
+    "severities": {
+      "critical": "critical",
+      "warning": "warning"
+    },
+    "mechanisms": {
+      "iptables": "iptables chain",
+      "ipset": "ipset",
+      "nftables": "nftables set",
+      "other": "other"
+    },
+    "kinds": {
+      "target-missing": "{{target}} does not exist although the jail has bans: they block nothing. Reload the jail.",
+      "not-hooked": "No rule sends traffic through {{target}}: its bans block nothing.",
+      "ip-missing": "Banned by fail2ban but absent from {{target}}.",
+      "ip-orphan": "In {{target}} but not banned by fail2ban: still blocked.",
+      "orphan-set": "The ipset {{target}} has entries but no rule uses it.",
+      "dangling-rule": "A rule matches the ipset {{target}}, which does not exist."
+    }
   }
 }

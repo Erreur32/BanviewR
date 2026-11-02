@@ -14,9 +14,10 @@ COPY . .
 RUN npm run build
 
 FROM node:22-trixie-slim
-# Only fail2ban-client is used, the server is never started in this image
+# Only fail2ban-client is used, the server is never started in this image.
+# iptables, ipset and nftables only read the host firewall for the audit.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends fail2ban \
+  && apt-get install -y --no-install-recommends fail2ban iptables ipset nftables \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists
 WORKDIR /app

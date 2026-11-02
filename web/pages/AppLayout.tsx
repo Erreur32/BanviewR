@@ -10,6 +10,7 @@ const NAV = [
   { to: '/instances', label: 'nav.instances' },
   { to: '/jails', label: 'nav.jails' },
   { to: '/stats', label: 'nav.stats' },
+  { to: '/firewall', label: 'nav.firewall' },
   { to: '/preferences', label: 'nav.preferences' },
 ] as const;
 
