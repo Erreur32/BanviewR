@@ -19,7 +19,8 @@
     "audit": "Audit log",
     "apiDocs": "API documentation",
     "stats": "Statistics",
-    "geoip": "Geolocation"
+    "geoip": "Geolocation",
+    "notifications": "Notifications"
   },
   "roles": {
     "admin": "Admin",
@@ -297,5 +298,41 @@
     "notBanned": "This address is not banned right now.",
     "history": "Ban history",
     "noHistory": "No ban of this address in the history."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "intro": "Sends new bans and manual actions to a webhook, Discord or Telegram. New bans are grouped into one message per minute; importing old bans (first start, catching up after downtime) sends nothing.",
+    "privacy": "Every notification leaves this server: it holds the banned address, its country, the jail, the instance name and, for an action, who did it. Nothing is sent until a destination is created here.",
+    "empty": "No notification set up: nothing is sent.",
+    "createTitle": "New destination",
+    "name": "Name",
+    "kind": "Type",
+    "kinds": {
+      "generic": "Webhook (JSON)",
+      "discord": "Discord",
+      "telegram": "Telegram"
+    },
+    "url": "URL",
+    "botToken": "Bot token",
+    "chatId": "Chat id",
+    "targetHint": {
+      "generic": "Receives a JSON POST (event, instance, bans or action). E.g. n8n, Home Assistant, ntfy.",
+      "discord": "Channel webhook URL (Channel settings, Integrations, Webhooks).",
+      "telegram": "Given by @BotFather. The bot must be a member of the chat."
+    },
+    "onBans": "New bans",
+    "onActions": "Manual actions (ban, unban, jails)",
+    "create": "Create",
+    "created": "Notification {{name}} created.",
+    "destination": "Destination",
+    "events": "Events",
+    "lastSend": "Last send",
+    "neverSent": "never sent",
+    "sentOk": "sent",
+    "disabled": "disabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "test": "Test",
+    "testSent": "Test message sent to {{name}}."
   }
 }

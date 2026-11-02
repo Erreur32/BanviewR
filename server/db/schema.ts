@@ -114,3 +114,20 @@ export const auditLog = sqliteTable('audit_log', {
   detail: text('detail'),
   ip: text('ip').notNull(),
 });
+
+// Outgoing notifications, all created by an admin: nothing is sent while this table is empty.
+// target holds a secret (webhook URL or bot token), never returned by the API.
+export const webhooks = sqliteTable('webhooks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  kind: text('kind', { enum: ['generic', 'discord', 'telegram'] }).notNull(),
+  target: text('target').notNull(),
+  chatId: text('chat_id'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  onBans: integer('on_bans', { mode: 'boolean' }).notNull().default(true),
+  onActions: integer('on_actions', { mode: 'boolean' }).notNull().default(false),
+  createdAt: createdAt(),
+  lastSentAt: integer('last_sent_at', { mode: 'timestamp' }),
+  // NULL: never sent, '': last send worked, otherwise the error
+  lastError: text('last_error'),
+});

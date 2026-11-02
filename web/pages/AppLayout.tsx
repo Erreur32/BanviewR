@@ -18,6 +18,7 @@ const ADMIN_NAV = [
   { to: '/admin/tokens', label: 'nav.tokens' },
   { to: '/admin/audit', label: 'nav.audit' },
   { to: '/admin/geoip', label: 'nav.geoip' },
+  { to: '/admin/notifications', label: 'nav.notifications' },
 ] as const;
 
 const navLinkClass = 'whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted hover:bg-bg2 hover:text-text';

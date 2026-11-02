@@ -121,7 +121,7 @@ Write tools (`write` scope): `ban`, `unban`, `jail_action`. They are hidden unle
 
 ## Privacy
 
-BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them, such as a webhook. Country and operator of an address come from local GeoIP databases; the only outgoing call is the optional DB-IP download an admin starts by hand, and it carries no ban data. Ban history (addresses, jails, dates) is copied to BanviewR's local database and kept 365 days by default (`BAN_HISTORY_DAYS`), or until the instance is removed.
+BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them: notifications go only to the webhook, Discord or Telegram destinations an admin creates, and carry the banned address, its country, the jail and the instance name. Country and operator of an address come from local GeoIP databases; the only outgoing call is the optional DB-IP download an admin starts by hand, and it carries no ban data. Ban history (addresses, jails, dates) is copied to BanviewR's local database and kept 365 days by default (`BAN_HISTORY_DAYS`), or until the instance is removed.
 
 ## Security note
 

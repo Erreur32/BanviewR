@@ -43,6 +43,13 @@
       "when": 1793539468236,
       "tag": "0005_long_red_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793619746987,
+      "tag": "0006_cheerful_starbolt",
+      "breakpoints": true
     }
   ]
 }
