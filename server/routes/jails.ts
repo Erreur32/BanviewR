@@ -12,8 +12,10 @@ import {
   threatRow,
   unbanTarget,
 } from '../../shared/fail2ban.ts';
+import { firewallAudit } from '../../shared/firewall.ts';
 import { readBanHistory, readBanStats, readThreats } from '../banEvents.ts';
 import { getHost } from '../db/queries.ts';
+import { readFirewallAudit } from '../firewallAudit.ts';
 import { located } from '../geoip.ts';
 import { CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
 import { changeBan, listJailRows, runJailAction } from '../jailOps.ts';
@@ -21,6 +23,8 @@ import { changeBan, listJailRows, runJailAction } from '../jailOps.ts';
 const jailParams = hostParams.extend({ jail: jailName });
 const WRITE = { access: 'write', rateLimit: CLIENT_RATE_LIMIT } as const;
 const READ = { access: 'read', rateLimit: CLIENT_RATE_LIMIT } as const;
+// One audit starts a dozen processes
+const AUDIT_RATE_LIMIT = { max: 10, timeWindow: '1 minute' };
 
 export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
   const connector = (hostId: number) => app.connect(getHost(app.db, hostId));
@@ -141,5 +145,14 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
       getHost(app.db, req.params.hostId);
       return ok({ threats: readThreats(app.db, req.params.hostId, req.query.hours, app.geo.locate) });
     },
+  );
+
+  app.get(
+    '/hosts/:hostId/firewall',
+    {
+      config: { access: 'read', rateLimit: AUDIT_RATE_LIMIT },
+      schema: { params: hostParams, response: { 200: okResponse({ audit: firewallAudit }) } },
+    },
+    async (req) => ok({ audit: await readFirewallAudit(connector(req.params.hostId)) }),
   );
 };

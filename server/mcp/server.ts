@@ -11,6 +11,7 @@ import type { Db } from '../db/index.ts';
 import { getHost } from '../db/queries.ts';
 import { hosts } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
+import { readFirewallAudit } from '../firewallAudit.ts';
 import { type Locate, located } from '../geoip.ts';
 import { changeBan, checkAgentBan, listJailRows, runJailAction } from '../jailOps.ts';
 
@@ -121,6 +122,14 @@ export function buildMcpServer(ctx: McpContext) {
       getHost(db, hostId);
       return { threats: readThreats(db, hostId, hours, locate) };
     },
+  );
+
+  tool(
+    'firewall_audit',
+    'read',
+    'Compare the bans of fail2ban with the firewall (iptables, ipset, nftables): bans missing from the firewall, chains or sets no rule uses, leftover entries. Read-only.',
+    { hostId },
+    ({ hostId }) => readFirewallAudit(host(hostId)).then((audit) => ({ audit })),
   );
 
   server.registerResource(

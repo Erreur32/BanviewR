@@ -20,7 +20,8 @@
     "apiDocs": "Documentation API",
     "stats": "Statistiques",
     "geoip": "Géolocalisation",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "firewall": "Firewall"
   },
   "roles": {
     "admin": "Admin",
@@ -346,5 +347,43 @@
     "disable": "Désactiver",
     "test": "Tester",
     "testSent": "Message de test envoyé à {{name}}."
+  },
+  "firewall": {
+    "title": "Audit du firewall",
+    "intro": "Compare ce que fail2ban dit bannir avec ce qu'iptables, ipset et nftables bloquent vraiment. En lecture seule : rien n'est modifié.",
+    "running": "Vérification...",
+    "rerun": "Vérifier à nouveau",
+    "read": "{{backend}} lu",
+    "notRead": "{{backend}} non lu",
+    "unreadable": "BanviewR n'a pas pu lire le firewall. Il doit tourner en root et, sous Docker, avoir la capacité NET_ADMIN (voir le README).",
+    "issuesTitle_one": "{{count}} problème",
+    "issuesTitle_other": "{{count}} problèmes",
+    "noIssue": "Aucun problème : le firewall correspond à fail2ban.",
+    "severity": "Gravité",
+    "issue": "Problème",
+    "jail": "Jail",
+    "action": "Action",
+    "target": "Chaîne ou set",
+    "jailsTitle": "Où chaque jail bannit",
+    "noAction": "aucune action",
+    "notChecked": "non vérifié",
+    "severities": {
+      "critical": "critique",
+      "warning": "avertissement"
+    },
+    "mechanisms": {
+      "iptables": "chaîne iptables",
+      "ipset": "ipset",
+      "nftables": "set nftables",
+      "other": "autre"
+    },
+    "kinds": {
+      "target-missing": "{{target}} n'existe pas alors que la jail a des bans : ils ne bloquent rien. Rechargez la jail.",
+      "not-hooked": "Aucune règle ne fait passer le trafic par {{target}} : ses bans ne bloquent rien.",
+      "ip-missing": "Banni par fail2ban mais absent de {{target}}.",
+      "ip-orphan": "Présent dans {{target}} mais pas banni par fail2ban : toujours bloqué.",
+      "orphan-set": "L'ipset {{target}} contient des entrées mais aucune règle ne l'utilise.",
+      "dangling-rule": "Une règle utilise l'ipset {{target}}, qui n'existe pas."
+    }
   }
 }

@@ -8,6 +8,11 @@ services:
     container_name: banviewr
     network_mode: host
     restart: unless-stopped
+    # Reading the firewall for the audit (iptables-save, ipset, nft) needs NET_ADMIN.
+    # It would also allow changing the host firewall, but fail2ban's socket already gives that much.
+    # Remove it to drop the audit.
+    cap_add:
+      - NET_ADMIN
     environment:
       HOST: 127.0.0.1
       PORT: 3025
