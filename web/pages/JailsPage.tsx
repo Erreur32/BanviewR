@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BanRow, JailAction, JailRow } from '../../shared/fail2ban.ts';
+import type { JailAction, JailRow, LocatedBan } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser, useFormatDateTime } from '../auth.ts';
 import { HostSwitch } from '../components/HostSwitch.tsx';
+import { IpOrigin } from '../components/IpOrigin.tsx';
 import { Badge, Button, Card, ConfirmButton, ErrorText, SelectField, Table, TextField } from '../components/ui.tsx';
 import { conflictText, errorText } from '../errors.ts';
 import { notify } from '../stores/notificationStore.ts';
@@ -141,7 +142,7 @@ function JailRowView({ hostId, jail, canWrite }: { hostId: number; jail: JailRow
   );
 }
 
-function BanRowView({ hostId, ban, canWrite }: { hostId: number; ban: BanRow; canWrite: boolean }) {
+function BanRowView({ hostId, ban, canWrite }: { hostId: number; ban: LocatedBan; canWrite: boolean }) {
   const { t } = useTranslation();
   const formatDate = useFormatDateTime();
   const refresh = useRefreshHost(hostId);
@@ -158,6 +159,9 @@ function BanRowView({ hostId, ban, canWrite }: { hostId: number; ban: BanRow; ca
   return (
     <tr>
       <td className="font-mono text-xs">{ban.ip}</td>
+      <td>
+        <IpOrigin geo={ban.geo} />
+      </td>
       <td>{ban.jail}</td>
       <td className="whitespace-nowrap text-muted">{formatDate(ban.bannedAt)}</td>
       <td className="whitespace-nowrap text-muted">
@@ -191,7 +195,7 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
   });
   const bans = useQuery({
     queryKey: bansKey(hostId),
-    queryFn: () => api.get<{ bans: BanRow[] }>(`/hosts/${hostId}/bans`),
+    queryFn: () => api.get<{ bans: LocatedBan[] }>(`/hosts/${hostId}/bans`),
     refetchInterval: REFRESH_MS,
   });
   const running = jails.data?.jails.filter((j) => j.running) ?? [];
@@ -229,7 +233,15 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
           <p className="text-sm text-muted">{t('jails.noBans')}</p>
         ) : (
           <Table
-            columns={[t('jails.ip'), t('jails.jail'), t('jails.bannedAt'), t('jails.expires'), t('jails.failures'), '']}
+            columns={[
+              t('jails.ip'),
+              t('geoip.origin'),
+              t('jails.jail'),
+              t('jails.bannedAt'),
+              t('jails.expires'),
+              t('jails.failures'),
+              '',
+            ]}
           >
             {bans.data.bans.map((ban) => (
               <BanRowView

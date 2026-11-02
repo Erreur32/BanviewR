@@ -33,9 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Notifications (toasts) for saved changes; an expired session sends you back to the sign-in page with a message.
 - Admin pages: users (create, change role, reset password, delete), API tokens (create with scopes and expiry, secret shown once with a copy button, revoke, then delete), audit log (most recent first, load more).
 - Interactive API documentation at `/api/docs/` (Swagger UI), linked from the sidebar, for signed-in users and `read` tokens.
+- Geolocation from local databases: country and network operator next to banned addresses (Jails and Statistics pages), most banned countries. No address is ever sent to an online service.
+- New admin page Geolocation: state of the country and ASN databases, one-click download of DB-IP Lite (CC BY 4.0) from download.db-ip.com, or drop your own `country.mmdb` and `asn.mmdb` (DB-IP Lite or MaxMind GeoLite2) in `data/geoip/`. Nothing is downloaded without that click.
+- Ban map on the Statistics page: countries colored by number of bans, hover for details. Drawn by BanviewR itself, no map tiles or outside service.
 
 ### For developers
 
+- `server/geoip.ts`: reads `DATA_DIR/geoip/{country,asn}.mmdb` with `mmdb-lib` (new dependency), picks up a new file within a minute without restart. `geo` (`{ country, asn, org }` or `null`) added to bans (`locatedBan`), history, threats and top addresses; `countries` added to ban statistics. Same in the MCP tools.
+- `GET /api/geoip` (read) and `POST /api/geoip/download` (admin session only, 3 per 10 minutes, audited as `geoip.download`).
+- `web/world.json`: country outlines from Natural Earth 1:110m (public domain), built by `scripts/world-map.mjs`, lazy-loaded with the map.
 - GitHub Actions CI on pull requests and on main: type check, Biome, tests, `npm audit` (high and above).
 - Auth API: `GET /api/auth/status`, `POST /api/auth/setup`, `/login`, `/logout`, `/password`; `GET/POST /api/users`, `PATCH/DELETE /api/users/:id`; `GET/POST /api/tokens`, `POST /api/tokens/:id/revoke`, `DELETE /api/tokens/:id`; `GET /api/audit` (keyset pagination with `before`).
 - Access control in one `onRequest` hook (`server/auth/access.ts`): each route declares `config.access` (`public`, `read`, `write`, `admin`), missing means `admin`. `sessionOnly` refuses API tokens. A `:hostId` route parameter is checked against the token's allowed instances.

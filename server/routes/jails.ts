@@ -2,18 +2,19 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { okResponse } from '../../shared/api.ts';
 import {
-  banRow,
   banStats,
   banTarget,
   jailAction,
   jailName,
   jailRow,
   jailStatus,
+  locatedBan,
   threatRow,
   unbanTarget,
 } from '../../shared/fail2ban.ts';
 import { readBanHistory, readBanStats, readThreats } from '../banEvents.ts';
 import { getHost } from '../db/queries.ts';
+import { located } from '../geoip.ts';
 import { CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
 import { changeBan, listJailRows, runJailAction } from '../jailOps.ts';
 
@@ -79,13 +80,13 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
           active: z.stringbool().default(true),
           limit: z.coerce.number().int().min(1).max(500).default(100),
         }),
-        response: { 200: okResponse({ bans: z.array(banRow) }) },
+        response: { 200: okResponse({ bans: z.array(locatedBan) }) },
       },
     },
     async (req) => {
       const host = connector(req.params.hostId);
       const { active, limit } = req.query;
-      return ok({ bans: await (active ? host.activeBans() : host.recentBans(limit)) });
+      return ok({ bans: located(app.geo.locate, await (active ? host.activeBans() : host.recentBans(limit))) });
     },
   );
 
@@ -103,7 +104,7 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
     // From the local history: it outlives fail2ban's purge and needs no running fail2ban
     async (req) => {
       getHost(app.db, req.params.hostId);
-      return ok({ stats: readBanStats(app.db, req.params.hostId, req.query.days) });
+      return ok({ stats: readBanStats(app.db, req.params.hostId, req.query.days, app.geo.locate) });
     },
   );
 
@@ -117,12 +118,12 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
           ip: z.union([z.ipv4(), z.ipv6()]).optional(),
           limit: z.coerce.number().int().min(1).max(1000).default(100),
         }),
-        response: { 200: okResponse({ bans: z.array(banRow) }) },
+        response: { 200: okResponse({ bans: z.array(locatedBan) }) },
       },
     },
     async (req) => {
       getHost(app.db, req.params.hostId);
-      return ok({ bans: readBanHistory(app.db, req.params.hostId, req.query) });
+      return ok({ bans: readBanHistory(app.db, req.params.hostId, req.query, app.geo.locate) });
     },
   );
 
@@ -138,7 +139,7 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (req) => {
       getHost(app.db, req.params.hostId);
-      return ok({ threats: readThreats(app.db, req.params.hostId, req.query.hours) });
+      return ok({ threats: readThreats(app.db, req.params.hostId, req.query.hours, app.geo.locate) });
     },
   );
 };

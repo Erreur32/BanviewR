@@ -18,7 +18,8 @@
     "tokens": "Jetons d'API",
     "audit": "Journal d'audit",
     "apiDocs": "Documentation API",
-    "stats": "Statistiques"
+    "stats": "Statistiques",
+    "geoip": "Géolocalisation"
   },
   "roles": {
     "admin": "Admin",
@@ -250,6 +251,41 @@
     "barValue_one": "{{label}} : {{count}} ban",
     "barValue_other": "{{label}} : {{count}} bans",
     "topIps": "Adresses les plus bannies",
-    "topJails": "Jails les plus actifs"
+    "topJails": "Jails les plus actifs",
+    "topCountries": "Pays les plus bannis",
+    "map": "Carte des bans",
+    "countryValue_one": "{{country}} : {{count}} ban, {{ips}} adresse(s)",
+    "countryValue_other": "{{country}} : {{count}} bans, {{ips}} adresse(s)",
+    "countryNone": "{{country}} : aucun ban",
+    "logScale": "bans, échelle logarithmique",
+    "unlocated_one": "{{count}} ban sans pays connu (adresse privée ou absente de la base).",
+    "unlocated_other": "{{count}} bans sans pays connu (adresses privées ou absentes de la base).",
+    "noGeo": "Aucun pays connu pour ces bans. Un administrateur peut installer une base de géolocalisation locale depuis la page Géolocalisation.",
+    "offMap": "Trop petits pour la carte : {{countries}}."
+  },
+  "geoip": {
+    "title": "Géolocalisation",
+    "intro": "Pays et opérateur des adresses bannies, lus dans des bases locales : aucune adresse n'est envoyée à un service en ligne. Sans base, BanviewR fonctionne normalement, sans pays.",
+    "origin": "Origine",
+    "country": "Pays",
+    "database": "Base",
+    "state": "État",
+    "type": "Type",
+    "builtAt": "Construite le",
+    "kind": {
+      "country": "Pays",
+      "asn": "Opérateur (ASN)"
+    },
+    "loaded": "chargée",
+    "missing": "absente",
+    "unreadable": "illisible",
+    "downloadTitle": "Télécharger DB-IP Lite",
+    "downloadInfo": "Télécharge les bases gratuites Pays et ASN depuis download.db-ip.com (environ 10 Mo). La requête ne contient aucune adresse ni donnée de bans, DB-IP voit seulement l'adresse de ce serveur. Rien n'est téléchargé sans ce clic : DB-IP publie une nouvelle version chaque mois, revenez ici pour la mettre à jour.",
+    "license": "Licence CC BY 4.0 :",
+    "download": "Télécharger",
+    "downloading": "Téléchargement...",
+    "downloaded": "Bases de géolocalisation à jour.",
+    "manualTitle": "Installation manuelle",
+    "manualInfo": "Vous pouvez aussi déposer vous-même country.mmdb et asn.mmdb (DB-IP Lite ou MaxMind GeoLite2) dans le dossier geoip du répertoire de données de BanviewR (par défaut data/geoip). Ils sont pris en compte en moins d'une minute, sans redémarrage."
   }
 }

@@ -17,6 +17,7 @@ export const mcpRoutes: FastifyPluginAsyncZod = async (app) => {
       db: app.db,
       connect: app.connect,
       writeEnabled: app.mcpWrite,
+      locate: app.geo.locate,
       caller: () => ({ principal, ip: req.ip }),
       logError: (err) => req.log.error(err),
     });

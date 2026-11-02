@@ -1,6 +1,7 @@
 import { type AppDeps, buildApp } from './app.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
 import { openDb } from './db/index.ts';
+import { openGeoIp } from './geoip.ts';
 
 export const testLocalHost = { socketPath: '/tmp/f2b.sock', dbPath: '/tmp/f2b.sqlite3', confPath: '/tmp/f2b' };
 
@@ -32,6 +33,7 @@ const testDeps: AppDeps = {
   connect: () => fakeConnector(),
   detection: { mode: 'none', reason: 'none' },
   mcpWrite: false,
+  geo: openGeoIp(null),
 };
 
 export function buildTestApp(deps: Partial<AppDeps> = {}) {

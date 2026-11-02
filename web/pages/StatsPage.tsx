@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BanStats } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
 import { HostSwitch } from '../components/HostSwitch.tsx';
+import { CountryLabel, IpOrigin } from '../components/IpOrigin.tsx';
 import { Card, ErrorText, SelectField, Table } from '../components/ui.tsx';
 import { errorText } from '../errors.ts';
 import { foldSlots } from '../stats.ts';
@@ -14,6 +15,9 @@ const PERIODS = [7, 30, 90, 365, 0];
 const REFRESH_MS = 60_000;
 const WIDTH = 720;
 const HEIGHT = 120;
+const TOP_COUNTRIES = 10;
+// Its outlines weigh about 40 KB compressed, only fetched when there are countries to show
+const WorldMap = lazy(() => import('../components/WorldMap.tsx'));
 
 type Bar = { key: string; label: string; bans: number };
 
@@ -104,6 +108,27 @@ function Charts({ stats }: { stats: BanStats }) {
   );
 }
 
+function MapCard({ stats }: { stats: BanStats }) {
+  const { t } = useTranslation();
+  const located = stats.countries.reduce((sum, c) => sum + c.bans, 0);
+  return (
+    <Card title={t('stats.map')}>
+      {stats.countries.length === 0 ? (
+        <p className="text-sm text-muted">{t('stats.noGeo')}</p>
+      ) : (
+        <>
+          <Suspense fallback={<p className="text-sm text-muted">{t('common.loading')}</p>}>
+            <WorldMap countries={stats.countries} />
+          </Suspense>
+          {located < stats.totalBans && (
+            <p className="mt-2 text-xs text-muted">{t('stats.unlocated', { count: stats.totalBans - located })}</p>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
 function HostStats({ hostId }: { hostId: number }) {
   const { t } = useTranslation();
   const [days, setDays] = useState(30);
@@ -137,13 +162,17 @@ function HostStats({ hostId }: { hostId: number }) {
               <Tile label={t('stats.uniqueIps')} value={data.uniqueIps} />
             </div>
             <Charts stats={data} />
+            <MapCard stats={data} />
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="min-w-0 space-y-2">
                 <h2 className="text-base font-semibold">{t('stats.topIps')}</h2>
-                <Table columns={[t('jails.ip'), t('jails.banned')]}>
+                <Table columns={[t('jails.ip'), t('geoip.origin'), t('jails.banned')]}>
                   {data.topIps.map((row) => (
                     <tr key={row.ip}>
                       <td className="font-mono text-xs">{row.ip}</td>
+                      <td>
+                        <IpOrigin geo={row.geo} />
+                      </td>
                       <td className="text-muted">{row.count}</td>
                     </tr>
                   ))}
@@ -161,6 +190,22 @@ function HostStats({ hostId }: { hostId: number }) {
                   ))}
                 </Table>
               </div>
+              {data.countries.length > 0 && (
+                <div className="min-w-0 space-y-2">
+                  <h2 className="text-base font-semibold">{t('stats.topCountries')}</h2>
+                  <Table columns={[t('geoip.country'), t('jails.banned'), t('stats.uniqueIps')]}>
+                    {data.countries.slice(0, TOP_COUNTRIES).map((row) => (
+                      <tr key={row.country}>
+                        <td>
+                          <CountryLabel code={row.country} />
+                        </td>
+                        <td className="text-muted">{row.bans}</td>
+                        <td className="text-muted">{row.ips}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                </div>
+              )}
             </div>
           </>
         ))}

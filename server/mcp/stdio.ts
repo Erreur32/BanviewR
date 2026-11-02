@@ -6,6 +6,7 @@ import { config } from '../config.ts';
 import { localConnector } from '../connectors/local.ts';
 import { openDb } from '../db/index.ts';
 import { AppError } from '../errors.ts';
+import { openGeoIp } from '../geoip.ts';
 import { buildMcpServer } from './server.ts';
 
 // Local MCP: same tools, tokens and audit log as HTTP. stdout carries the protocol, logs go to stderr.
@@ -32,6 +33,7 @@ try {
     db,
     connect: localConnector,
     writeEnabled: config.mcpWrite,
+    locate: openGeoIp(join(config.dataDir, 'geoip')).locate,
     caller,
     logError: (err) => console.error(err),
   });
