@@ -43,12 +43,24 @@
   },
   "dashboard": {
     "title": "Tableau de bord",
-    "server": "Serveur",
     "connecting": "Connexion au serveur...",
     "serverOk": "Serveur OK",
     "serverDown": "Serveur injoignable",
     "versionUptime": "v{{version}}, démarré depuis {{uptime}}",
-    "instancesLink": "Voir les instances fail2ban"
+    "instancesLink": "Voir les instances fail2ban",
+    "connected": "connecté, fail2ban {{version}}",
+    "clientMissing": "fail2ban-client absent",
+    "down": "injoignable",
+    "bans24h": "Bans sur 24 h",
+    "ips24h": "Adresses sur 24 h",
+    "activeBans": "Bans en cours",
+    "recurring": "Adresses revenues",
+    "recurringTitle": "Bannies plusieurs fois sur 24 h",
+    "noRecurring": "Aucune adresse bannie plus d'une fois sur 24 h.",
+    "lastBan": "Dernier ban",
+    "countries24h": "Pays sur 24 h",
+    "noCountries": "Aucun pays connu sur 24 h.",
+    "statsLink": "Voir les statistiques"
   },
   "prefs": {
     "title": "Préférences",
