@@ -43,12 +43,24 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "server": "Server",
     "connecting": "Connecting to the server...",
     "serverOk": "Server OK",
     "serverDown": "Server unreachable",
     "versionUptime": "v{{version}}, up for {{uptime}}",
-    "instancesLink": "See fail2ban instances"
+    "instancesLink": "See fail2ban instances",
+    "connected": "connected, fail2ban {{version}}",
+    "clientMissing": "fail2ban-client missing",
+    "down": "unreachable",
+    "bans24h": "Bans in 24 h",
+    "ips24h": "Addresses in 24 h",
+    "activeBans": "Active bans",
+    "recurring": "Repeat offenders",
+    "recurringTitle": "Banned more than once in 24 h",
+    "noRecurring": "No address banned more than once in 24 h.",
+    "lastBan": "Last ban",
+    "countries24h": "Countries in 24 h",
+    "noCountries": "No known country in 24 h.",
+    "statsLink": "See statistics"
   },
   "prefs": {
     "title": "Preferences",

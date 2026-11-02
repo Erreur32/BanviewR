@@ -77,3 +77,4 @@ export const threatRow = z.object({
   lastBanAt: z.string(),
   geo: ipGeo,
 });
+export type ThreatRow = z.infer<typeof threatRow>;
