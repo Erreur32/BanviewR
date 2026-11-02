@@ -3,6 +3,7 @@ import type { Caller } from './audit.ts';
 import type { Db } from './db/index.ts';
 import { hosts, webhooks } from './db/schema.ts';
 import type { Locate } from './geoip.ts';
+import { publish } from './mqtt.ts';
 
 type Webhook = typeof webhooks.$inferSelect;
 
@@ -33,6 +34,12 @@ function text(n: Notice) {
   return [`BanviewR ${n.instance}: ${n.bans.length} new ban(s)`, ...lines].join('\n');
 }
 
+// The JSON event for generic webhooks and MQTT, bans capped
+const jsonBody = (n: Notice) =>
+  n.event === 'bans'
+    ? { ...n, bans: n.bans.slice(0, MAX_JSON_BANS), more: Math.max(0, n.bans.length - MAX_JSON_BANS) }
+    : n;
+
 function request(w: Webhook, n: Notice) {
   switch (w.kind) {
     case 'discord':
@@ -45,18 +52,25 @@ function request(w: Webhook, n: Notice) {
         body: { chat_id: w.chatId, text: text(n), disable_web_page_preview: true },
       };
     default:
-      return {
-        url: w.target,
-        body:
-          n.event === 'bans'
-            ? { ...n, bans: n.bans.slice(0, MAX_JSON_BANS), more: Math.max(0, n.bans.length - MAX_JSON_BANS) }
-            : n,
-      };
+      return { url: w.target, body: jsonBody(n) };
   }
 }
 
 // Returns '' on success, else a short reason. The reason never holds the URL: it may carry a secret.
 export async function send(db: Db, w: Webhook, n: Notice) {
+  const error = w.kind === 'mqtt' ? await sendMqtt(w, n) : await post(w, n);
+  db.update(webhooks).set({ lastSentAt: new Date(), lastError: error }).where(eq(webhooks.id, w.id)).run();
+  return error;
+}
+
+// The MQTT errors are written for this purpose: no URL, no credentials
+const sendMqtt = (w: Webhook, n: Notice) =>
+  publish(w.target, JSON.stringify(jsonBody(n)), TIMEOUT_MS).then(
+    () => '',
+    (err: Error) => err.message,
+  );
+
+async function post(w: Webhook, n: Notice) {
   const { url, body } = request(w, n);
   let error = '';
   try {
@@ -72,7 +86,6 @@ export async function send(db: Db, w: Webhook, n: Notice) {
     const cause = (err as { cause?: { code?: string } }).cause?.code;
     error = cause ?? (err instanceof Error && err.name === 'TimeoutError' ? 'Timeout' : 'Unreachable');
   }
-  db.update(webhooks).set({ lastSentAt: new Date(), lastError: error }).where(eq(webhooks.id, w.id)).run();
   return error;
 }
 

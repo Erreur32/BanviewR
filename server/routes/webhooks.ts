@@ -12,8 +12,12 @@ import { send, testNotice } from '../notifications.ts';
 
 type Webhook = typeof webhooks.$inferSelect;
 
-// The URL path and the bot token are secrets: only the origin or the chat is shown
-const destination = (w: Webhook) => (w.kind === 'telegram' ? `Telegram ${w.chatId}` : new URL(w.target).origin);
+// Secrets stay out: the URL path and the bot token, or the MQTT credentials (the topic is shown)
+function destination(w: Webhook) {
+  if (w.kind === 'telegram') return `Telegram ${w.chatId}`;
+  const url = new URL(w.target);
+  return w.kind === 'mqtt' ? `${url.protocol}//${url.host}${url.pathname}` : url.origin;
+}
 
 const toRow = (w: Webhook) => ({
   id: w.id,
