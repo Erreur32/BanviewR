@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readBanStats, syncBans } from './banEvents.ts';
+import { purgeBans, readBanStats, syncBans } from './banEvents.ts';
 import type { RawBan } from './connectors/sqliteReader.ts';
 import type { Db } from './db/index.ts';
 import { banEvents, hosts } from './db/schema.ts';
@@ -57,6 +57,27 @@ describe('ban sync', () => {
     await syncBans(db, source([ban('203.0.113.1', NOW)]), 1);
     db.delete(hosts).run();
     expect(db.select().from(banEvents).all()).toEqual([]);
+  });
+});
+
+describe('ban retention', () => {
+  const rows = [ban('203.0.113.1', NOW - 400 * 86400), ban('203.0.113.2', NOW - 10)];
+
+  it('purges bans older than the cutoff, for one instance', async () => {
+    await syncBans(db, source(rows), 1);
+    expect(purgeBans(db, 1, NOW - 365 * 86400)).toBe(1);
+    expect(
+      db
+        .select()
+        .from(banEvents)
+        .all()
+        .map((r) => r.ip),
+    ).toEqual(['203.0.113.2']);
+  });
+
+  it('does not import what the purge would remove', async () => {
+    expect(await syncBans(db, source(rows), 1, NOW - 365 * 86400)).toBe(1);
+    expect(await syncBans(db, source(rows), 1, NOW - 365 * 86400)).toBe(0);
   });
 });
 

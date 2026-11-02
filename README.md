@@ -77,17 +77,18 @@ npm run dev
 
 The web dev server proxies `/api` to the server, so only port 5185 needs to be reachable.
 
-| Variable      | Default                              | Use                                                            |
-| ------------- | ------------------------------------ | -------------------------------------------------------------- |
-| `PORT`        | `3025`                               | Server port                                                    |
-| `HOST`        | `127.0.0.1`                          | Server bind address                                            |
-| `VITE_PORT`   | `5185`                               | Web dev server port                                            |
-| `TRUST_PROXY` | `loopback`                           | Proxies trusted for `X-Forwarded-*` headers (client IP, HTTPS) |
-| `DATA_DIR`    | `./data`                             | SQLite database (`banviewr.db`)                                |
-| `F2B_SOCKET`  | `/var/run/fail2ban/fail2ban.sock`    | Local fail2ban socket, seeds the first host                    |
-| `F2B_DB`      | `/var/lib/fail2ban/fail2ban.sqlite3` | Local fail2ban database, seeds the first host                  |
-| `F2B_CONF`    | `/etc/fail2ban`                      | Local fail2ban configuration folder, seeds the first host      |
-| `MCP_WRITE`   | `false`                              | Shows the MCP write tools (ban, unban, jail actions)           |
+| Variable           | Default                              | Use                                                            |
+| ------------------ | ------------------------------------ | -------------------------------------------------------------- |
+| `PORT`             | `3025`                               | Server port                                                    |
+| `HOST`             | `127.0.0.1`                          | Server bind address                                            |
+| `VITE_PORT`        | `5185`                               | Web dev server port                                            |
+| `TRUST_PROXY`      | `loopback`                           | Proxies trusted for `X-Forwarded-*` headers (client IP, HTTPS) |
+| `DATA_DIR`         | `./data`                             | SQLite database (`banviewr.db`)                                |
+| `F2B_SOCKET`       | `/var/run/fail2ban/fail2ban.sock`    | Local fail2ban socket, seeds the first host                    |
+| `F2B_DB`           | `/var/lib/fail2ban/fail2ban.sqlite3` | Local fail2ban database, seeds the first host                  |
+| `F2B_CONF`         | `/etc/fail2ban`                      | Local fail2ban configuration folder, seeds the first host      |
+| `MCP_WRITE`        | `false`                              | Shows the MCP write tools (ban, unban, jail actions)           |
+| `BAN_HISTORY_DAYS` | `365`                                | Days of ban history kept, `0` keeps it forever                 |
 
 Other commands:
 
@@ -116,11 +117,11 @@ AI agents reach BanviewR with an API token, with the same scopes, instance limit
 
 Read tools (`read` scope): `list_instances`, `list_jails`, `active_bans`, `ban_history`, `ban_stats`, `active_threats`, and the `banviewr://threats` resource.
 
-Write tools (`write` scope): `ban`, `unban`, `jail_action`. They are hidden unless `MCP_WRITE=true`. An agent has no human approval step: give it a `write` token only if you accept that it can ban addresses on its own.
+Write tools (`write` scope): `ban`, `unban`, `jail_action`. They are hidden unless `MCP_WRITE=true`. An agent cannot ban private, local or link-local addresses, nor an address a user is signed in from; these refusals go to the audit log. There is still no human approval step: give it a `write` token only if you accept that it can ban public addresses on its own.
 
 ## Privacy
 
-BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them, such as a webhook. Country and operator of an address come from local GeoIP databases; the only outgoing call is the optional DB-IP download an admin starts by hand, and it carries no ban data. Ban history (addresses, jails, dates) is copied to BanviewR's local database and kept until the instance is removed.
+BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them, such as a webhook. Country and operator of an address come from local GeoIP databases; the only outgoing call is the optional DB-IP download an admin starts by hand, and it carries no ban data. Ban history (addresses, jails, dates) is copied to BanviewR's local database and kept 365 days by default (`BAN_HISTORY_DAYS`), or until the instance is removed.
 
 ## Security note
 

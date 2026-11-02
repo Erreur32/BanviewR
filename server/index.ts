@@ -26,7 +26,7 @@ const app = await buildApp(
   },
 );
 app.log.info(detection, 'Local fail2ban detection');
-startBanSync(app);
+startBanSync(app, config.banHistoryDays);
 
 async function shutdown(signal: string) {
   app.log.info(`${signal} received, shutting down`);
