@@ -19,7 +19,8 @@
     "audit": "Journal d'audit",
     "apiDocs": "Documentation API",
     "stats": "Statistiques",
-    "geoip": "Géolocalisation"
+    "geoip": "Géolocalisation",
+    "notifications": "Notifications"
   },
   "roles": {
     "admin": "Admin",
@@ -297,5 +298,41 @@
     "notBanned": "Cette adresse n'est pas bannie en ce moment.",
     "history": "Historique des bans",
     "noHistory": "Aucun ban de cette adresse dans l'historique."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "intro": "Envoie les nouveaux bans et les actions manuelles vers un webhook, Discord ou Telegram. Les nouveaux bans sont regroupés en un message par minute ; un import de bans anciens (premier démarrage, reprise après une coupure) n'envoie rien.",
+    "privacy": "Chaque notification sort de ce serveur : elle contient l'adresse bannie, son pays, le jail, le nom de l'instance et, pour une action, le nom de qui l'a faite. Rien n'est envoyé tant qu'aucune destination n'est créée ici.",
+    "empty": "Aucune notification configurée : rien n'est envoyé.",
+    "createTitle": "Nouvelle destination",
+    "name": "Nom",
+    "kind": "Type",
+    "kinds": {
+      "generic": "Webhook (JSON)",
+      "discord": "Discord",
+      "telegram": "Telegram"
+    },
+    "url": "URL",
+    "botToken": "Jeton du bot",
+    "chatId": "Identifiant du chat",
+    "targetHint": {
+      "generic": "Reçoit un POST JSON (event, instance, bans ou action). Ex. n8n, Home Assistant, ntfy.",
+      "discord": "URL du webhook du salon (Paramètres du salon, Intégrations, Webhooks).",
+      "telegram": "Donné par @BotFather. Le bot doit être membre du chat."
+    },
+    "onBans": "Nouveaux bans",
+    "onActions": "Actions manuelles (ban, déban, jails)",
+    "create": "Créer",
+    "created": "Notification {{name}} créée.",
+    "destination": "Destination",
+    "events": "Événements",
+    "lastSend": "Dernier envoi",
+    "neverSent": "jamais envoyé",
+    "sentOk": "envoyé",
+    "disabled": "désactivée",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "test": "Tester",
+    "testSent": "Message de test envoyé à {{name}}."
   }
 }

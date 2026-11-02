@@ -7,6 +7,7 @@ import i18n from './i18n.ts';
 import { AppLayout } from './pages/AppLayout.tsx';
 import { AuditPage } from './pages/admin/AuditPage.tsx';
 import { GeoIpPage } from './pages/admin/GeoIpPage.tsx';
+import { NotificationsPage } from './pages/admin/NotificationsPage.tsx';
 import { TokensPage } from './pages/admin/TokensPage.tsx';
 import { UsersPage } from './pages/admin/UsersPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
@@ -105,6 +106,11 @@ const usersRoute = createRoute({ getParentRoute: () => adminRoute, path: '/users
 const tokensRoute = createRoute({ getParentRoute: () => adminRoute, path: '/tokens', component: TokensPage });
 const auditRoute = createRoute({ getParentRoute: () => adminRoute, path: '/audit', component: AuditPage });
 const geoipRoute = createRoute({ getParentRoute: () => adminRoute, path: '/geoip', component: GeoIpPage });
+const notificationsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/notifications',
+  component: NotificationsPage,
+});
 
 const routeTree = rootRoute.addChildren([
   setupRoute,
@@ -116,7 +122,7 @@ const routeTree = rootRoute.addChildren([
     statsRoute,
     ipRoute,
     preferencesRoute,
-    adminRoute.addChildren([usersRoute, tokensRoute, auditRoute, geoipRoute]),
+    adminRoute.addChildren([usersRoute, tokensRoute, auditRoute, geoipRoute, notificationsRoute]),
   ]),
 ]);
 

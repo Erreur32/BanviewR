@@ -6,6 +6,7 @@ import type { Fail2banConnector } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
 import { sessions } from './db/schema.ts';
 import { AppError } from './errors.ts';
+import { notifyAction } from './notifications.ts';
 
 // What the REST routes and the MCP tools share, so both apply the same rules
 
@@ -88,11 +89,15 @@ export async function changeBan(
   // Whoever bans their own address loses the UI and has to fix it from the machine
   if (verb === 'ban' && covers(target, caller.ip)) throw new AppError('CONFLICT', 'This would ban your own address');
   await audited(db, caller, { action: `jail.${verb}`, hostId, target, detail: jail }, () => host[verb](jail, target));
+  notifyAction(db, caller, { hostId, action: verb, target, jail });
 }
 
-export const runJailAction = (
+export async function runJailAction(
   db: Db,
   caller: Caller,
   host: Fail2banConnector,
   { hostId, jail, action }: { hostId: number; jail: string; action: JailAction },
-) => audited(db, caller, { action: `jail.${action}`, hostId, target: jail }, () => host.jailAction(jail, action));
+) {
+  await audited(db, caller, { action: `jail.${action}`, hostId, target: jail }, () => host.jailAction(jail, action));
+  notifyAction(db, caller, { hostId, action, target: jail, jail: null });
+}

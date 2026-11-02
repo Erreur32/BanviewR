@@ -5,6 +5,7 @@ import type { Fail2banConnector } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
 import { banEvents, hosts } from './db/schema.ts';
 import { countByCountry, type Locate, located } from './geoip.ts';
+import { type NewBan, notifyBans } from './notifications.ts';
 
 const SYNC_MS = 60_000;
 const PAGE = 2000;
@@ -18,7 +19,13 @@ const MAX_THREATS = 100;
 export const daysAgo = (days: number) => (days > 0 ? Math.floor(Date.now() / 1000) - days * 86400 : 0);
 
 // notBefore: bans older than the retention are not imported, or each round would bring back what the purge removed
-export async function syncBans(db: Db, connector: Fail2banConnector, hostId: number, notBefore = 0) {
+export async function syncBans(
+  db: Db,
+  connector: Fail2banConnector,
+  hostId: number,
+  notBefore = 0,
+  onAdded?: (rows: NewBan[]) => void,
+) {
   const latest = db
     .select({ at: max(banEvents.bannedAt) })
     .from(banEvents)
@@ -30,7 +37,9 @@ export async function syncBans(db: Db, connector: Fail2banConnector, hostId: num
     const rows = await connector.bansSince(since, PAGE, offset);
     if (rows.length > 0) {
       const values = rows.map(({ timeofban, ...ban }) => ({ ...ban, hostId, bannedAt: timeofban }));
-      added += db.insert(banEvents).values(values).onConflictDoNothing().run().changes;
+      const inserted = db.insert(banEvents).values(values).onConflictDoNothing().returning().all();
+      added += inserted.length;
+      if (inserted.length > 0) onAdded?.(inserted);
     }
     if (rows.length < PAGE) return added;
   }
@@ -54,7 +63,9 @@ export function startBanSync(app: FastifyInstance, historyDays: number) {
         if (purged > 0) app.log.info({ hostId: host.id, purged }, 'Old bans purged');
       }
       try {
-        const added = await syncBans(app.db, app.connect(host), host.id, cutoff);
+        const added = await syncBans(app.db, app.connect(host), host.id, cutoff, (rows) =>
+          notifyBans(app.db, app.geo.locate, host.id, rows),
+        );
         if (added > 0) app.log.info({ hostId: host.id, added }, 'Bans synced');
       } catch (err) {
         if (!stopped) app.log.warn({ hostId: host.id, err }, 'Ban sync failed');

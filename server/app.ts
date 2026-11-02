@@ -18,6 +18,7 @@ import { jailRoutes } from './routes/jails.ts';
 import { mcpRoutes } from './routes/mcp.ts';
 import { tokenRoutes } from './routes/tokens.ts';
 import { userRoutes } from './routes/users.ts';
+import { webhookRoutes } from './routes/webhooks.ts';
 
 export type AppDeps = { connect: ConnectorFactory; detection: LocalDetection; mcpWrite: boolean; geo: GeoIp };
 
@@ -56,6 +57,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       await api.register(jailRoutes);
       await api.register(mcpRoutes);
       await api.register(geoipRoutes);
+      await api.register(webhookRoutes);
     },
     { prefix: '/api' },
   );
