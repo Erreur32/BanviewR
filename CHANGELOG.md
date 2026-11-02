@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### For developers
 
+- `SECURITY.md` (private vulnerability reports through GitHub) and `.github/dependabot.yml` (monthly grouped updates for Actions, npm and the Docker base image).
+
 - `server/geoip.ts`: reads `DATA_DIR/geoip/{country,asn}.mmdb` with `mmdb-lib` (new dependency), picks up a new file within a minute without restart. `geo` (`{ country, asn, org }` or `null`) added to bans (`locatedBan`), history, threats and top addresses; `countries` added to ban statistics. Same in the MCP tools.
 - `Dockerfile` (Node 22 on Debian trixie, fail2ban 1.1 client only, healthcheck on `/api/health`), CI job building the image (not published). In production the server serves `dist/` with `@fastify/static`, unknown non-API GET paths get `index.html`. CSP without `upgrade-insecure-requests` on the whole app, for plain HTTP on a LAN.
 - Table `webhooks` (migration `0006`), `server/notifications.ts` (fire and forget, 10 s timeout, no redirects, errors kept in `last_error` without the URL). Routes `GET/POST /api/webhooks`, `PATCH/DELETE /api/webhooks/:id`, `POST /api/webhooks/:id/test`, signed-in admin only and audited. The URL path and the Telegram token are never returned. Discord messages cannot mention anyone, Telegram messages are plain text.
