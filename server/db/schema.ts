@@ -120,7 +120,7 @@ export const auditLog = sqliteTable('audit_log', {
 export const webhooks = sqliteTable('webhooks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  kind: text('kind', { enum: ['generic', 'discord', 'telegram'] }).notNull(),
+  kind: text('kind', { enum: ['generic', 'discord', 'telegram', 'mqtt'] }).notNull(),
   target: text('target').notNull(),
   chatId: text('chat_id'),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),

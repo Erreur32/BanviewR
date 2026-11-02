@@ -1,13 +1,30 @@
 import { z } from 'zod';
 
-export const webhookKind = z.enum(['generic', 'discord', 'telegram']);
+export const webhookKind = z.enum(['generic', 'discord', 'telegram', 'mqtt']);
 export type WebhookKind = z.infer<typeof webhookKind>;
 
 const httpUrl = z.url({ protocol: /^https?$/ }).max(2048);
 const TELEGRAM_TOKEN = /^\d{5,}:[\w-]{30,}$/;
 const TELEGRAM_CHAT = /^(-?\d{1,20}|@\w{5,32})$/;
 
-// target: the URL for generic and Discord, the bot token for Telegram. Never sent back by the API.
+// mqtt://user:password@broker:1883/topic or mqtts://: a host, a topic without wildcards,
+// and a password only with a username (MQTT 3.1.1)
+function mqttProblem(target: string) {
+  let url: URL;
+  try {
+    url = new URL(target);
+  } catch {
+    return 'Must be an mqtt:// or mqtts:// URL';
+  }
+  if (!['mqtt:', 'mqtts:'].includes(url.protocol) || !url.hostname) return 'Must be an mqtt:// or mqtts:// URL';
+  const topic = decodeURIComponent(url.pathname.slice(1));
+  // A raw # or ? would be read as a URL fragment or query and cut from the topic
+  if (!topic || /[+#?]/.test(topic) || /[#?]/.test(target)) return 'The path must be a topic, without +, # or ?';
+  if (url.password && !url.username) return 'A password needs a username';
+  return null;
+}
+
+// target: the URL for generic, Discord and MQTT, the bot token for Telegram. Never sent back by the API.
 export const webhookBody = z
   .object({
     name: z.string().trim().min(1).max(64),
@@ -23,6 +40,9 @@ export const webhookBody = z
     if (w.kind === 'telegram') {
       if (!TELEGRAM_TOKEN.test(w.target)) fail('target', 'Invalid Telegram bot token');
       if (!w.chatId || !TELEGRAM_CHAT.test(w.chatId)) fail('chatId', 'Invalid Telegram chat id');
+    } else if (w.kind === 'mqtt') {
+      const problem = mqttProblem(w.target);
+      if (problem) fail('target', problem);
     } else if (!httpUrl.safeParse(w.target).success) {
       fail('target', 'Must be an http or https URL');
     }

@@ -18,7 +18,7 @@ import {
 import { errorText } from '../../errors.ts';
 import { notify } from '../../stores/notificationStore.ts';
 
-const KINDS: WebhookKind[] = ['generic', 'discord', 'telegram'];
+const KINDS: WebhookKind[] = ['generic', 'discord', 'telegram', 'mqtt'];
 const webhooksKey = ['webhooks'];
 
 function CreateCard() {
