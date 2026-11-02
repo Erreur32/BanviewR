@@ -21,6 +21,10 @@ export interface Fail2banConnector {
   // One setting of a jail action as fail2ban holds it, <tags> included. null when it has no such setting.
   actionProperty(jail: string, action: string, property: string): Promise<string | null>;
   firewall(): Promise<FirewallDump>;
+  // Fills the ipset `set` with IPv4 addresses and networks, swapped in at once, and drops it on input
+  loadBlocklist(set: string, entries: string[]): Promise<void>;
+  // Removes the rule and the ipset, nothing to do when they are gone
+  dropBlocklist(set: string): Promise<void>;
 }
 
 // Raw output of the firewall tools, null when one could not be read (missing, no permission)

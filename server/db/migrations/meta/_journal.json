@@ -50,6 +50,13 @@
       "when": 1793619746987,
       "tag": "0006_cheerful_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793623626974,
+      "tag": "0007_flat_electro",
+      "breakpoints": true
     }
   ]
 }

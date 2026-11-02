@@ -10,6 +10,7 @@ import { GeoIpPage } from './pages/admin/GeoIpPage.tsx';
 import { NotificationsPage } from './pages/admin/NotificationsPage.tsx';
 import { TokensPage } from './pages/admin/TokensPage.tsx';
 import { UsersPage } from './pages/admin/UsersPage.tsx';
+import { BlocklistsPage } from './pages/BlocklistsPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { FirewallPage } from './pages/FirewallPage.tsx';
 import { InstancesPage } from './pages/InstancesPage.tsx';
@@ -88,6 +89,7 @@ const instancesRoute = createRoute({ getParentRoute: () => appRoute, path: '/ins
 const jailsRoute = createRoute({ getParentRoute: () => appRoute, path: '/jails', component: JailsPage });
 const statsRoute = createRoute({ getParentRoute: () => appRoute, path: '/stats', component: StatsPage });
 const firewallRoute = createRoute({ getParentRoute: () => appRoute, path: '/firewall', component: FirewallPage });
+const blocklistsRoute = createRoute({ getParentRoute: () => appRoute, path: '/blocklists', component: BlocklistsPage });
 const ipRoute = createRoute({ getParentRoute: () => appRoute, path: '/hosts/$hostId/ips/$ip', component: IpPage });
 const preferencesRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -123,6 +125,7 @@ const routeTree = rootRoute.addChildren([
     jailsRoute,
     statsRoute,
     firewallRoute,
+    blocklistsRoute,
     ipRoute,
     preferencesRoute,
     adminRoute.addChildren([usersRoute, tokensRoute, auditRoute, geoipRoute, notificationsRoute]),

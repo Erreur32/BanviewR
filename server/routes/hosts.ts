@@ -5,9 +5,10 @@ import { okResponse } from '../../shared/api.ts';
 import { hostBody, hostPatch, hostRow } from '../../shared/hosts.ts';
 import { audit } from '../audit.ts';
 import { canAccessHost } from '../auth/access.ts';
+import { setName } from '../blocklists.ts';
 import type { Db } from '../db/index.ts';
 import { getHost } from '../db/queries.ts';
-import { hosts } from '../db/schema.ts';
+import { blocklists, hosts } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { ADMIN_SESSION, CLIENT_RATE_LIMIT, hostParams, ok } from '../http.ts';
 
@@ -99,7 +100,8 @@ export const hostRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   );
 
-  // Only forgets the instance: fail2ban itself and its bans are not touched
+  // Only forgets the instance: fail2ban itself and its bans are not touched. Its blocklists
+  // are BanviewR's own, they leave the firewall with it.
   app.delete(
     '/hosts/:hostId',
     { config: ADMIN_SESSION, schema: { params: hostParams, response: { 200: okResponse() } } },
@@ -107,6 +109,8 @@ export const hostRoutes: FastifyPluginAsyncZod = async (app) => {
       const host = getHost(db, req.params.hostId);
       const total = db.select({ n: count() }).from(hosts).get()?.n ?? 0;
       if (total <= 1) throw new AppError('CONFLICT', 'The last instance cannot be removed');
+      const lists = db.select().from(blocklists).where(eq(blocklists.hostId, host.id)).all();
+      for (const list of lists) await app.connect(host).dropBlocklist(setName(list.id));
       db.delete(hosts).where(eq(hosts.id, host.id)).run();
       // No hostId: the row is gone and the audit foreign key would refuse it
       audit(req, { action: 'host.delete', ok: true, target: host.name });

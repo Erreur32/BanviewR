@@ -77,6 +77,56 @@ async function readFirewall() {
   return { iptables: tables.length ? tables.join('\n') : null, ipset, nft };
 }
 
+// Firewall changes: the error text of ipset and iptables says what went wrong, without paths
+async function change(cmd: string, args: string[], input?: string) {
+  const task = run(cmd, args, { timeout: 60_000, maxBuffer: MAX_OUTPUT });
+  if (input !== undefined) task.child.stdin?.end(input);
+  try {
+    await task;
+  } catch (err) {
+    const detail = String((err as { stderr?: string }).stderr ?? '')
+      .trim()
+      .split('\n')[0]
+      ?.slice(0, 200);
+    throw new AppError('UNAVAILABLE', `${cmd} ${args[0]} failed${detail ? `: ${detail}` : ''}`);
+  }
+}
+const attempt = (cmd: string, args: string[]) =>
+  change(cmd, args).then(
+    () => true,
+    () => false,
+  );
+const dropRule = (set: string) => ['INPUT', '-m', 'set', '--match-set', set, 'src', '-j', 'DROP'];
+
+async function loadBlocklist(set: string, entries: string[]) {
+  const next = `${set}-new`;
+  const create = (name: string) => [
+    'create',
+    name,
+    'hash:net',
+    'family',
+    'inet',
+    'maxelem',
+    String(Math.max(65536, entries.length)),
+  ];
+  await attempt('ipset', ['destroy', next]);
+  // Exists already when refreshing: swap below brings the new size along
+  await attempt('ipset', create(set));
+  await change('ipset', create(next));
+  await change('ipset', ['restore'], entries.map((e) => `add ${next} ${e}\n`).join(''));
+  await change('ipset', ['swap', next, set]);
+  await attempt('ipset', ['destroy', next]);
+  // First in INPUT: ahead of the accept rules, the private ranges were left out of the list
+  if (!(await attempt('iptables', ['-C', ...dropRule(set)]))) await change('iptables', ['-I', ...dropRule(set)]);
+}
+
+async function dropBlocklist(set: string) {
+  while (await attempt('iptables', ['-D', ...dropRule(set)])) {
+    // a rule added twice by hand goes too
+  }
+  for (const name of [set, `${set}-new`]) await attempt('ipset', ['destroy', name]);
+}
+
 // Talks to a fail2ban on this machine through its own client, its instance socket and its database
 export function localConnector(
   host: { socketPath: string; dbPath: string; confPath: string },
@@ -146,5 +196,7 @@ export function localConnector(
       }
     },
     firewall: readFirewall,
+    loadBlocklist,
+    dropBlocklist,
   };
 }

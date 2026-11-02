@@ -131,3 +131,22 @@ export const webhooks = sqliteTable('webhooks', {
   // NULL: never sent, '': last send worked, otherwise the error
   lastError: text('last_error'),
 });
+
+// IP blocklists downloaded from a URL into an ipset dropped on input, per instance.
+// Created disabled: nothing is downloaded until an admin enables one.
+export const blocklists = sqliteTable('blocklists', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  hostId: integer('host_id')
+    .notNull()
+    .references(() => hosts.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  url: text('url').notNull(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+  createdAt: createdAt(),
+  loadedAt: integer('loaded_at', { mode: 'timestamp' }),
+  // Entries in the firewall, and those left out (private ranges, signed-in users, too wide)
+  entries: integer('entries').notNull().default(0),
+  skipped: integer('skipped').notNull().default(0),
+  // NULL: never loaded, '': last load worked, otherwise the error
+  lastError: text('last_error'),
+});

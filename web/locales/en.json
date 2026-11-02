@@ -21,7 +21,8 @@
     "stats": "Statistics",
     "geoip": "Geolocation",
     "notifications": "Notifications",
-    "firewall": "Firewall"
+    "firewall": "Firewall",
+    "blocklists": "Blocklists"
   },
   "roles": {
     "admin": "Admin",
@@ -385,5 +386,34 @@
       "orphan-set": "The ipset {{target}} has entries but no rule uses it.",
       "dangling-rule": "A rule matches the ipset {{target}}, which does not exist."
     }
+  },
+  "blocklists": {
+    "title": "Blocklists",
+    "intro": "Public lists of IPv4 addresses and networks, dropped on input by the firewall of this instance's machine (an ipset and an iptables DROP rule). Private ranges, addresses users are signed in from and networks wider than a /8 are left out.",
+    "privacy": "Off by default. A list that is on is downloaded from its URL when turned on and every 6 hours: the site serving it sees this server's address. Nothing else is sent.",
+    "listsTitle": "Lists",
+    "none": "No list yet.",
+    "list": "List",
+    "entries": "Entries",
+    "loadedAt": "Last load",
+    "never": "never",
+    "skipped_one": "{{count}} left out",
+    "skipped_other": "{{count}} left out",
+    "on": "on",
+    "off": "off",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "refresh": "Reload now",
+    "loading": "Loading...",
+    "delete": "Delete",
+    "confirmDelete": "Confirm",
+    "addTitle": "Add a list",
+    "preset": "Known list",
+    "custom": "Other (enter the URL)",
+    "name": "Name",
+    "url": "URL",
+    "urlHint": "Plain text, one address or network per line. Comments and IPv6 entries are ignored.",
+    "add": "Add (off)",
+    "added": "{{name}} added, turn it on to load it"
   }
 }
