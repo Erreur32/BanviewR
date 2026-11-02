@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { countryCount, ipGeo } from './geoip.ts';
 
 // Passed to fail2ban-client as an argument: the first character rules out option-like names
 export const jailName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,63}$/, 'Invalid jail name');
@@ -53,10 +54,16 @@ export const banRow = z.object({
 });
 export type BanRow = z.infer<typeof banRow>;
 
+// A ban as the API answers it, with where the address comes from
+export const locatedBan = banRow.extend({ geo: ipGeo });
+export type LocatedBan = z.infer<typeof locatedBan>;
+
 export const banStats = z.object({
   totalBans: z.number(),
   uniqueIps: z.number(),
-  topIps: z.array(z.object({ ip: z.string(), count: z.number() })),
+  topIps: z.array(z.object({ ip: z.string(), count: z.number(), geo: ipGeo })),
+  // Sorted by bans, addresses with no known country left out
+  countries: z.array(countryCount),
   topJails: z.array(z.object({ jail: z.string(), bans: z.number(), failures: z.number() })),
   // Hourly slots, `at` in unix seconds: the reader folds them in its own time zone
   slots: z.array(z.object({ at: z.number(), bans: z.number() })),
@@ -68,4 +75,5 @@ export const threatRow = z.object({
   bans: z.number(),
   jails: z.array(z.string()),
   lastBanAt: z.string(),
+  geo: ipGeo,
 });

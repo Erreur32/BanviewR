@@ -3,6 +3,7 @@ import { readBanStats, syncBans } from './banEvents.ts';
 import type { RawBan } from './connectors/sqliteReader.ts';
 import type { Db } from './db/index.ts';
 import { banEvents, hosts } from './db/schema.ts';
+import { noGeo } from './geoip.ts';
 import { fakeConnector, openTestDb } from './test-utils.ts';
 
 const NOW = Math.floor(Date.now() / 1000);
@@ -49,7 +50,7 @@ describe('ban sync', () => {
   it('keeps history after fail2ban purged it', async () => {
     await syncBans(db, source([ban('203.0.113.1', NOW - 90 * 86400), ban('203.0.113.2', NOW)]), 1);
     await syncBans(db, source([]), 1);
-    expect(readBanStats(db, 1, 0).totalBans).toBe(2);
+    expect(readBanStats(db, 1, 0, noGeo).totalBans).toBe(2);
   });
 
   it('removes the history with its instance', async () => {
@@ -80,7 +81,7 @@ describe('ban stats', () => {
 
   it('covers a period, for one instance', async () => {
     await twoHosts();
-    const week = readBanStats(db, 1, 7);
+    const week = readBanStats(db, 1, 7, noGeo);
     expect(week).toMatchObject({
       totalBans: 2,
       uniqueIps: 1,
@@ -91,7 +92,7 @@ describe('ban stats', () => {
 
   it('covers everything with hourly slots', async () => {
     await twoHosts();
-    const all = readBanStats(db, 1, 0);
+    const all = readBanStats(db, 1, 0, noGeo);
     expect(all).toMatchObject({ totalBans: 3, uniqueIps: 2 });
     expect(all.slots).toHaveLength(3);
     expect(all.slots.every((s) => s.at % 3600 === 0)).toBe(true);
@@ -99,6 +100,22 @@ describe('ban stats', () => {
   });
 
   it('is empty without bans', () => {
-    expect(readBanStats(db, 1, 30)).toEqual({ totalBans: 0, uniqueIps: 0, topIps: [], topJails: [], slots: [] });
+    expect(readBanStats(db, 1, 30, noGeo)).toEqual({
+      totalBans: 0,
+      uniqueIps: 0,
+      topIps: [],
+      countries: [],
+      topJails: [],
+      slots: [],
+    });
+  });
+
+  it('counts bans per country, unknown addresses left out', async () => {
+    await twoHosts();
+    const country: Record<string, string> = { '203.0.113.1': 'FR', '203.0.113.2': 'FR' };
+    const locate = (ip: string) => (country[ip] ? { country: country[ip], asn: null, org: null } : null);
+    const all = readBanStats(db, 1, 0, locate);
+    expect(all.countries).toEqual([{ country: 'FR', bans: 3, ips: 2 }]);
+    expect(all.topIps[0]?.geo).toEqual({ country: 'FR', asn: null, org: null });
   });
 });

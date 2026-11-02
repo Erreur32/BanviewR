@@ -6,6 +6,7 @@ import { Toasts } from './components/Toasts.tsx';
 import i18n from './i18n.ts';
 import { AppLayout } from './pages/AppLayout.tsx';
 import { AuditPage } from './pages/admin/AuditPage.tsx';
+import { GeoIpPage } from './pages/admin/GeoIpPage.tsx';
 import { TokensPage } from './pages/admin/TokensPage.tsx';
 import { UsersPage } from './pages/admin/UsersPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
@@ -94,6 +95,7 @@ const adminRoute = createRoute({
 const usersRoute = createRoute({ getParentRoute: () => adminRoute, path: '/users', component: UsersPage });
 const tokensRoute = createRoute({ getParentRoute: () => adminRoute, path: '/tokens', component: TokensPage });
 const auditRoute = createRoute({ getParentRoute: () => adminRoute, path: '/audit', component: AuditPage });
+const geoipRoute = createRoute({ getParentRoute: () => adminRoute, path: '/geoip', component: GeoIpPage });
 
 const routeTree = rootRoute.addChildren([
   setupRoute,
@@ -104,7 +106,7 @@ const routeTree = rootRoute.addChildren([
     jailsRoute,
     statsRoute,
     preferencesRoute,
-    adminRoute.addChildren([usersRoute, tokensRoute, auditRoute]),
+    adminRoute.addChildren([usersRoute, tokensRoute, auditRoute, geoipRoute]),
   ]),
 ]);
 

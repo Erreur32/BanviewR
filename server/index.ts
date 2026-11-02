@@ -5,6 +5,7 @@ import { config } from './config.ts';
 import { detectLocalFail2ban } from './connectors/detect.ts';
 import { localConnector } from './connectors/local.ts';
 import { openDb } from './db/index.ts';
+import { openGeoIp } from './geoip.ts';
 
 const db = openDb(join(config.dataDir, 'banviewr.db'), {
   socketPath: config.f2bSocket,
@@ -16,7 +17,7 @@ const detection = await detectLocalFail2ban(config.f2bSocket);
 
 const app = await buildApp(
   db,
-  { connect: localConnector, detection, mcpWrite: config.mcpWrite },
+  { connect: localConnector, detection, mcpWrite: config.mcpWrite, geo: openGeoIp(join(config.dataDir, 'geoip')) },
   {
     trustProxy: config.trustProxy,
     logger: config.isDev

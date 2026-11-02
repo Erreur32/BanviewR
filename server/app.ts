@@ -7,9 +7,11 @@ import { registerAccessControl } from './auth/access.ts';
 import type { ConnectorFactory } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
 import { registerErrorHandling } from './errors.ts';
+import type { GeoIp } from './geoip.ts';
 import { registerOpenApi } from './openapi.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
+import { geoipRoutes } from './routes/geoip.ts';
 import { healthRoutes } from './routes/health.ts';
 import { hostRoutes } from './routes/hosts.ts';
 import { jailRoutes } from './routes/jails.ts';
@@ -17,7 +19,7 @@ import { mcpRoutes } from './routes/mcp.ts';
 import { tokenRoutes } from './routes/tokens.ts';
 import { userRoutes } from './routes/users.ts';
 
-export type AppDeps = { connect: ConnectorFactory; detection: LocalDetection; mcpWrite: boolean };
+export type AppDeps = { connect: ConnectorFactory; detection: LocalDetection; mcpWrite: boolean; geo: GeoIp };
 
 declare module 'fastify' {
   interface FastifyInstance extends AppDeps {
@@ -33,6 +35,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
   app.decorate('connect', deps.connect);
   app.decorate('detection', deps.detection);
   app.decorate('mcpWrite', deps.mcpWrite);
+  app.decorate('geo', deps.geo);
   app.addHook('onClose', async () => db.$client.close());
   registerErrorHandling(app);
 
@@ -52,6 +55,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       await api.register(hostRoutes);
       await api.register(jailRoutes);
       await api.register(mcpRoutes);
+      await api.register(geoipRoutes);
     },
     { prefix: '/api' },
   );

@@ -18,7 +18,8 @@
     "tokens": "API tokens",
     "audit": "Audit log",
     "apiDocs": "API documentation",
-    "stats": "Statistics"
+    "stats": "Statistics",
+    "geoip": "Geolocation"
   },
   "roles": {
     "admin": "Admin",
@@ -250,6 +251,41 @@
     "barValue_one": "{{label}}: {{count}} ban",
     "barValue_other": "{{label}}: {{count}} bans",
     "topIps": "Most banned addresses",
-    "topJails": "Busiest jails"
+    "topJails": "Busiest jails",
+    "topCountries": "Most banned countries",
+    "map": "Ban map",
+    "countryValue_one": "{{country}}: {{count}} ban, {{ips}} address(es)",
+    "countryValue_other": "{{country}}: {{count}} bans, {{ips}} address(es)",
+    "countryNone": "{{country}}: no ban",
+    "logScale": "bans, log scale",
+    "unlocated_one": "{{count}} ban with no known country (private address or missing from the database).",
+    "unlocated_other": "{{count}} bans with no known country (private addresses or missing from the database).",
+    "noGeo": "No known country for these bans. An admin can install a local geolocation database from the Geolocation page.",
+    "offMap": "Too small for the map: {{countries}}."
+  },
+  "geoip": {
+    "title": "Geolocation",
+    "intro": "Country and network operator of banned addresses, read from local databases: no address is sent to an online service. Without a database BanviewR works as usual, without countries.",
+    "origin": "Origin",
+    "country": "Country",
+    "database": "Database",
+    "state": "State",
+    "type": "Type",
+    "builtAt": "Built on",
+    "kind": {
+      "country": "Country",
+      "asn": "Operator (ASN)"
+    },
+    "loaded": "loaded",
+    "missing": "missing",
+    "unreadable": "unreadable",
+    "downloadTitle": "Download DB-IP Lite",
+    "downloadInfo": "Downloads the free Country and ASN databases from download.db-ip.com (about 10 MB). The request carries no address and no ban data, DB-IP only sees the address of this server. Nothing is downloaded without this click: DB-IP publishes a new release every month, come back here to update.",
+    "license": "License CC BY 4.0:",
+    "download": "Download",
+    "downloading": "Downloading...",
+    "downloaded": "Geolocation databases up to date.",
+    "manualTitle": "Manual install",
+    "manualInfo": "You can also drop country.mmdb and asn.mmdb (DB-IP Lite or MaxMind GeoLite2) yourself in the geoip folder of the BanviewR data directory (data/geoip by default). They are picked up within a minute, no restart needed."
   }
 }

@@ -1,9 +1,10 @@
-import { and, count, countDistinct, desc, eq, gte, max, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, max, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { BanStats } from '../shared/fail2ban.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
 import { banEvents, hosts } from './db/schema.ts';
+import { countByCountry, type Locate, located } from './geoip.ts';
 
 const SYNC_MS = 60_000;
 const PAGE = 2000;
@@ -56,29 +57,27 @@ export function startBanSync(app: FastifyInstance) {
 }
 
 // days = 0 covers everything: `since` is then 0, older than any ban
-export function readBanStats(db: Db, hostId: number, days: number): BanStats {
+export function readBanStats(db: Db, hostId: number, days: number, locate: Locate): BanStats {
   const since = days > 0 ? Math.floor(Date.now() / 1000) - days * 86400 : 0;
   const inPeriod = and(eq(banEvents.hostId, hostId), gte(banEvents.bannedAt, since));
   const bans = count();
   const failures = sql<number>`SUM(${banEvents.failures})`;
   const slot = sql<number>`${banEvents.bannedAt} / 3600 * 3600`;
 
-  const totals = db
-    .select({ totalBans: bans, uniqueIps: countDistinct(banEvents.ip) })
+  // shortcut: every address of the period in memory for the country counts, fine up to a few
+  // hundred thousand; past that, store the country with each ban and group in SQL
+  const ipCounts = db
+    .select({ ip: banEvents.ip, count: bans })
     .from(banEvents)
     .where(inPeriod)
-    .get();
+    .groupBy(banEvents.ip)
+    .orderBy(desc(bans))
+    .all();
   return {
-    totalBans: totals?.totalBans ?? 0,
-    uniqueIps: totals?.uniqueIps ?? 0,
-    topIps: db
-      .select({ ip: banEvents.ip, count: bans })
-      .from(banEvents)
-      .where(inPeriod)
-      .groupBy(banEvents.ip)
-      .orderBy(desc(bans))
-      .limit(TOP)
-      .all(),
+    totalBans: ipCounts.reduce((sum, row) => sum + row.count, 0),
+    uniqueIps: ipCounts.length,
+    topIps: located(locate, ipCounts.slice(0, TOP)),
+    countries: countByCountry(locate, ipCounts),
     topJails: db
       .select({ jail: banEvents.jail, bans, failures })
       .from(banEvents)
@@ -92,8 +91,13 @@ export function readBanStats(db: Db, hostId: number, days: number): BanStats {
 }
 
 // Latest first, one address or all
-export function readBanHistory(db: Db, hostId: number, { ip, limit }: { ip?: string | undefined; limit: number }) {
-  return db
+export function readBanHistory(
+  db: Db,
+  hostId: number,
+  { ip, limit }: { ip?: string | undefined; limit: number },
+  locate: Locate,
+) {
+  const rows = db
     .select()
     .from(banEvents)
     .where(and(eq(banEvents.hostId, hostId), ip ? eq(banEvents.ip, ip) : undefined))
@@ -107,10 +111,11 @@ export function readBanHistory(db: Db, hostId: number, { ip, limit }: { ip?: str
       bantime,
       failures,
     }));
+  return located(locate, rows);
 }
 
 // Addresses that came back within the window: one ban alone is routine
-export function readThreats(db: Db, hostId: number, hours: number) {
+export function readThreats(db: Db, hostId: number, hours: number, locate: Locate) {
   const since = Math.floor(Date.now() / 1000) - hours * 3600;
   const bans = count();
   const lastBan = max(banEvents.bannedAt);
@@ -128,5 +133,6 @@ export function readThreats(db: Db, hostId: number, hours: number) {
       bans: row.bans,
       jails: row.jails.split(','),
       lastBanAt: new Date((row.lastBan ?? 0) * 1000).toISOString(),
+      geo: locate(row.ip),
     }));
 }
