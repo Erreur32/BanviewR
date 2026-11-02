@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New admin page Geolocation: state of the country and ASN databases, one-click download of DB-IP Lite (CC BY 4.0) from download.db-ip.com, or drop your own `country.mmdb` and `asn.mmdb` (DB-IP Lite or MaxMind GeoLite2) in `data/geoip/`. Nothing is downloaded without that click.
 - Ban history is kept 365 days by default, then purged (`BAN_HISTORY_DAYS`, `0` keeps everything): it holds personal data.
 - AI agents (MCP) can no longer ban private, local or link-local addresses, networks that contain them, or an address a user is signed in from. Each refusal is written to the audit log.
+- Address page: click an address on the Jails or Statistics page to see its country and network operator, its current bans (with unban) and its whole ban history, with first and last ban and the jails it hit.
+- Errors the server answers (fail2ban down, invalid input) now show at once instead of after several silent retries.
 - Ban map on the Statistics page: countries colored by number of bans, hover for details. Drawn by BanviewR itself, no map tiles or outside service.
 
 ### For developers

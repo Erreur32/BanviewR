@@ -11,6 +11,7 @@ import { TokensPage } from './pages/admin/TokensPage.tsx';
 import { UsersPage } from './pages/admin/UsersPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { InstancesPage } from './pages/InstancesPage.tsx';
+import { IpPage } from './pages/IpPage.tsx';
 import { JailsPage } from './pages/JailsPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { PreferencesPage } from './pages/PreferencesPage.tsx';
@@ -19,6 +20,13 @@ import { StatsPage } from './pages/StatsPage.tsx';
 import { notify } from './stores/notificationStore.ts';
 
 export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // An error the server answered (bad input, fail2ban down) comes back the same on retry.
+      // Network failures and HTTP errors (INTERNAL, e.g. a proxy while the server restarts) are retried.
+      retry: (failures, err) => failures < 3 && !(err instanceof ApiError && err.code !== 'INTERNAL'),
+    },
+  },
   queryCache: new QueryCache({
     // A session that expires while the app is open sends the user back to the sign-in page
     onError: (err) => {
@@ -77,6 +85,7 @@ const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', 
 const instancesRoute = createRoute({ getParentRoute: () => appRoute, path: '/instances', component: InstancesPage });
 const jailsRoute = createRoute({ getParentRoute: () => appRoute, path: '/jails', component: JailsPage });
 const statsRoute = createRoute({ getParentRoute: () => appRoute, path: '/stats', component: StatsPage });
+const ipRoute = createRoute({ getParentRoute: () => appRoute, path: '/hosts/$hostId/ips/$ip', component: IpPage });
 const preferencesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/preferences',
@@ -105,6 +114,7 @@ const routeTree = rootRoute.addChildren([
     instancesRoute,
     jailsRoute,
     statsRoute,
+    ipRoute,
     preferencesRoute,
     adminRoute.addChildren([usersRoute, tokensRoute, auditRoute, geoipRoute]),
   ]),

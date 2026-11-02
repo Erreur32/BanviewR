@@ -287,5 +287,15 @@
     "downloaded": "Geolocation databases up to date.",
     "manualTitle": "Manual install",
     "manualInfo": "You can also drop country.mmdb and asn.mmdb (DB-IP Lite or MaxMind GeoLite2) yourself in the geoip folder of the BanviewR data directory (data/geoip by default). They are picked up within a minute, no restart needed."
+  },
+  "ip": {
+    "onInstance": "Instance {{name}}",
+    "totalBans": "Total bans",
+    "jails": "Jails",
+    "firstBan": "First ban",
+    "lastBan": "Last ban",
+    "notBanned": "This address is not banned right now.",
+    "history": "Ban history",
+    "noHistory": "No ban of this address in the history."
   }
 }
