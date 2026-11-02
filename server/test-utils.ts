@@ -28,6 +28,8 @@ export const fakeConnector = (overrides: Partial<Fail2banConnector> = {}): Fail2
     jailActions: unexpected,
     actionProperty: unexpected,
     firewall: unexpected,
+    loadBlocklist: unexpected,
+    dropBlocklist: unexpected,
     ...overrides,
   };
 };

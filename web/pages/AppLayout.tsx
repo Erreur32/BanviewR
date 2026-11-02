@@ -11,6 +11,7 @@ const NAV = [
   { to: '/jails', label: 'nav.jails' },
   { to: '/stats', label: 'nav.stats' },
   { to: '/firewall', label: 'nav.firewall' },
+  { to: '/blocklists', label: 'nav.blocklists' },
   { to: '/preferences', label: 'nav.preferences' },
 ] as const;
 

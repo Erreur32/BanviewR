@@ -31,7 +31,7 @@ BanviewR drives the firewall of the machines it manages. Every design choice fol
 
 ## Status
 
-Early development. Instances, jails, ban and unban, stats and MCP work; firewall audit, blocklists and notifications are still being ported.
+Early development, close to v0.1: instances, jails, ban and unban, history and stats, map, notifications, firewall audit, blocklists, MCP and Docker work.
 BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.16.0, where the fail2ban part lives today.
 
 ## Features (target for v0.1)
@@ -73,7 +73,7 @@ Then open `http://127.0.0.1:3025` on that machine and create the first admin acc
 
 The container runs as root, because fail2ban's socket is root-only. It never starts a fail2ban server of its own.
 
-The firewall audit reads the host firewall (`iptables-save`, `ipset list`, `nft list ruleset`), which needs the `NET_ADMIN` capability set in `docker-compose.yml`. That capability would also let the container change the host firewall; access to fail2ban's socket already allows as much, since fail2ban runs its actions as root. Remove `cap_add` to drop the audit, the rest keeps working.
+The firewall audit reads the host firewall (`iptables-save`, `ipset list`, `nft list ruleset`), which needs the `NET_ADMIN` capability set in `docker-compose.yml`. That capability would also let the container change the host firewall; access to fail2ban's socket already allows as much, since fail2ban runs its actions as root. Blocklists use the same capability to write their ipset and iptables DROP rule on the host. Remove `cap_add` to drop the audit and blocklists, the rest keeps working.
 
 ## Development
 
@@ -136,7 +136,7 @@ Write tools (`write` scope): `ban`, `unban`, `jail_action`. They are hidden unle
 
 ## Privacy
 
-BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them: notifications go only to the webhook, Discord or Telegram destinations an admin creates, and carry the banned address, its country, the jail and the instance name. Country and operator of an address come from local GeoIP databases; the only outgoing call is the optional DB-IP download an admin starts by hand, and it carries no ban data. Ban history (addresses, jails, dates) is copied to BanviewR's local database and kept 365 days by default (`BAN_HISTORY_DAYS`), or until the instance is removed.
+BanviewR is self-hosted and local only. There is no cloud service behind it, no subscription and no telemetry. Banned addresses, logs, accounts and the audit log never leave your machines unless you enable a feature that sends them: notifications go only to the webhook, Discord or Telegram destinations an admin creates, and carry the banned address, its country, the jail and the instance name. Country and operator of an address come from local GeoIP databases; the DB-IP download is optional and started by hand. Blocklists an admin turns on are downloaded from their URL then and every 6 hours: the site serving a list sees your server's address, nothing else is sent. Neither carries ban data. Ban history (addresses, jails, dates) is copied to BanviewR's local database and kept 365 days by default (`BAN_HISTORY_DAYS`), or until the instance is removed.
 
 ## Security note
 

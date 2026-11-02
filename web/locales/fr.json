@@ -21,7 +21,8 @@
     "stats": "Statistiques",
     "geoip": "Géolocalisation",
     "notifications": "Notifications",
-    "firewall": "Firewall"
+    "firewall": "Firewall",
+    "blocklists": "Blocklists"
   },
   "roles": {
     "admin": "Admin",
@@ -385,5 +386,34 @@
       "orphan-set": "L'ipset {{target}} contient des entrées mais aucune règle ne l'utilise.",
       "dangling-rule": "Une règle utilise l'ipset {{target}}, qui n'existe pas."
     }
+  },
+  "blocklists": {
+    "title": "Blocklists",
+    "intro": "Listes publiques d'adresses et de réseaux IPv4, rejetés en entrée par le firewall de la machine de cette instance (un ipset et une règle iptables DROP). Les plages privées, les adresses des utilisateurs connectés et les réseaux plus larges qu'un /8 sont écartés.",
+    "privacy": "Désactivées par défaut. Une liste activée est téléchargée depuis son URL à l'activation puis toutes les 6 heures : le site qui la sert voit l'adresse de ce serveur. Rien d'autre n'est envoyé.",
+    "listsTitle": "Listes",
+    "none": "Aucune liste pour l'instant.",
+    "list": "Liste",
+    "entries": "Entrées",
+    "loadedAt": "Dernier chargement",
+    "never": "jamais",
+    "skipped_one": "{{count}} écartée",
+    "skipped_other": "{{count}} écartées",
+    "on": "activée",
+    "off": "désactivée",
+    "turnOn": "Activer",
+    "turnOff": "Désactiver",
+    "refresh": "Recharger",
+    "loading": "Chargement...",
+    "delete": "Supprimer",
+    "confirmDelete": "Confirmer",
+    "addTitle": "Ajouter une liste",
+    "preset": "Liste connue",
+    "custom": "Autre (saisir l'URL)",
+    "name": "Nom",
+    "url": "URL",
+    "urlHint": "Texte brut, une adresse ou un réseau par ligne. Les commentaires et les entrées IPv6 sont ignorés.",
+    "add": "Ajouter (désactivée)",
+    "added": "{{name}} ajoutée, activez-la pour la charger"
   }
 }

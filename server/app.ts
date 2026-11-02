@@ -13,6 +13,7 @@ import type { GeoIp } from './geoip.ts';
 import { registerOpenApi } from './openapi.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
+import { blocklistRoutes } from './routes/blocklists.ts';
 import { geoipRoutes } from './routes/geoip.ts';
 import { healthRoutes } from './routes/health.ts';
 import { hostRoutes } from './routes/hosts.ts';
@@ -69,6 +70,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       await api.register(mcpRoutes);
       await api.register(geoipRoutes);
       await api.register(webhookRoutes);
+      await api.register(blocklistRoutes);
     },
     { prefix: '/api' },
   );

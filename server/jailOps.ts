@@ -44,7 +44,7 @@ export function covers(target: string, ip: string) {
 type BanChange = { hostId: number; jail: string; target: string };
 
 // Local, private and link-local ranges: an agent misled by some text could cut the LAN off
-const PRIVATE_RANGES = [
+export const PRIVATE_RANGES = [
   '0.0.0.0/8',
   '10.0.0.0/8',
   '100.64.0.0/10',
@@ -57,6 +57,15 @@ const PRIVATE_RANGES = [
   'fe80::/10',
 ];
 
+// Addresses users are signed in from right now
+export const signedInIps = (db: Db) =>
+  db
+    .selectDistinct({ ip: sessions.ip })
+    .from(sessions)
+    .where(gt(sessions.expiresAt, new Date()))
+    .all()
+    .map((s) => s.ip);
+
 // Two networks overlap when one holds the start of the other
 const overlaps = (a: string, b: string) => covers(a, b.split('/')[0] ?? '') || covers(b, a.split('/')[0] ?? '');
 
@@ -67,12 +76,7 @@ export function checkAgentBan(db: Db, caller: Caller, { hostId, jail, target }: 
   if (PRIVATE_RANGES.some((range) => overlaps(target, range))) {
     reason = 'Agents cannot ban private, local or link-local addresses';
   } else {
-    const signedIn = db
-      .selectDistinct({ ip: sessions.ip })
-      .from(sessions)
-      .where(gt(sessions.expiresAt, new Date()))
-      .all();
-    if (signedIn.some((s) => covers(target, s.ip))) reason = 'A user is signed in from this address';
+    if (signedInIps(db).some((ip) => covers(target, ip))) reason = 'A user is signed in from this address';
   }
   if (!reason) return;
   recordAudit(db, caller, { action: 'jail.ban', ok: false, hostId, target, detail: `${jail}: refused, ${reason}` });
