@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-02
+
 ### For users
 
 - Accounts: the first admin is created on first start (no default password), then sign-in with a session cookie valid 7 days, extended while in use.
@@ -48,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ban map on the Statistics page: countries colored by number of bans, hover for details. Drawn by BanviewR itself, no map tiles or outside service.
 
 ### For developers
+
+- `npm run release -- <x.y.z|patch|minor|major>`: sets the version in `package.json` and `package-lock.json` and dates the CHANGELOG section.
+- A `vX.Y.Z` tag publishes the Docker image to GHCR (amd64 and arm64, workflow `release.yml`). The web app is built once on the runner's platform.
 
 - SonarCloud analysis on pushes to `main` and on pull requests (`sonar-project.properties`, workflow `sonarcloud.yml`), skipped while the `SONAR_TOKEN` secret is not set.
 

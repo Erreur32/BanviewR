@@ -3,8 +3,9 @@
 # and listens on 127.0.0.1 only; put a reverse proxy with HTTPS in front to reach it from elsewhere.
 services:
   banviewr:
+    # Published image; `docker compose up -d --build` builds it from this folder instead
+    image: ghcr.io/erreur32/banviewr:latest
     build: .
-    image: banviewr:local
     container_name: banviewr
     network_mode: host
     restart: unless-stopped
