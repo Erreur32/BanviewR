@@ -1,7 +1,7 @@
 {
   "name": "banviewr",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "predev": "lsof -ti:3025 2>/dev/null | xargs -r kill -9; lsof -ti:5185 2>/dev/null | xargs -r kill -9; true",
@@ -15,6 +15,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "db:generate": "drizzle-kit generate",
+    "release": "node scripts/version.mjs",
     "check": "tsc && biome check . && vitest run"
   },
   "dependencies": {

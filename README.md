@@ -31,7 +31,7 @@ BanviewR drives the firewall of the machines it manages. Every design choice fol
 
 ## Status
 
-Early development, close to v0.1: instances, jails, ban and unban, history and stats, map, notifications, firewall audit, blocklists, MCP and Docker work.
+v0.1: instances, jails, ban and unban, history and stats, map, notifications, firewall audit, blocklists, MCP and Docker work.
 BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.16.0, where the fail2ban part lives today.
 
 ## Features (target for v0.1)
@@ -66,8 +66,11 @@ External mode: BanviewR drives the fail2ban already installed on the machine (so
 
 ```bash
 git clone https://github.com/Erreur32/BanviewR.git && cd BanviewR
-docker compose up -d --build
+docker compose up -d          # pulls ghcr.io/erreur32/banviewr:latest
+# or build the image from this folder: docker compose up -d --build
 ```
+
+Each release `vX.Y.Z` publishes the image for amd64 and arm64, tagged `X.Y.Z`, `X.Y` and `latest`. Pin a version in `docker-compose.yml` to upgrade only when you choose.
 
 Then open `http://127.0.0.1:3025` on that machine and create the first admin account. The container uses the host network and listens on `127.0.0.1` only: put a reverse proxy with HTTPS in front of it to reach it from elsewhere, or set `HOST` in `docker-compose.yml` at your own risk. Data (database, GeoIP files) lives in `./data`.
 

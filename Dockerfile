@@ -6,7 +6,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:22-trixie AS web
+# The built web app is the same on every platform: built natively, not under emulation
+FROM --platform=$BUILDPLATFORM node:22-trixie AS web
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
