@@ -15,7 +15,15 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # Node majors go together (image, @types/node, native modules, CI) and are done on purpose
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: monthly
+    # Node majors go together (image, @types/node, native modules, CI) and are done on purpose
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
