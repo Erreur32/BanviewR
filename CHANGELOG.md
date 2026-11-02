@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### For developers
 
+- SonarCloud analysis on pushes to `main` and on pull requests (`sonar-project.properties`, workflow `sonarcloud.yml`), skipped while the `SONAR_TOKEN` secret is not set.
+
 - `SECURITY.md` (private vulnerability reports through GitHub) and `.github/dependabot.yml` (monthly grouped updates for Actions, npm and the Docker base image).
 
 - `server/geoip.ts`: reads `DATA_DIR/geoip/{country,asn}.mmdb` with `mmdb-lib` (new dependency), picks up a new file within a minute without restart. `geo` (`{ country, asn, org }` or `null`) added to bans (`locatedBan`), history, threats and top addresses; `countries` added to ban statistics. Same in the MCP tools.
