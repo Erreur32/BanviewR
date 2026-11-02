@@ -1,0 +1,21 @@
+# External mode: BanviewR drives the fail2ban already running on this machine.
+# Host network: BanviewR sees the real client addresses (own-address guard, sign-in limits)
+# and listens on 127.0.0.1 only; put a reverse proxy with HTTPS in front to reach it from elsewhere.
+services:
+  banviewr:
+    build: .
+    image: banviewr:local
+    container_name: banviewr
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      HOST: 127.0.0.1
+      PORT: 3025
+      # BAN_HISTORY_DAYS: 365
+      # MCP_WRITE: "false"
+    volumes:
+      - ./data:/data
+      # fail2ban's socket is root-only: the container runs as root to reach it
+      - /var/run/fail2ban:/var/run/fail2ban
+      - /var/lib/fail2ban:/var/lib/fail2ban:ro
+      - /etc/fail2ban:/etc/fail2ban:ro

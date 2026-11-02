@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New admin page Geolocation: state of the country and ASN databases, one-click download of DB-IP Lite (CC BY 4.0) from download.db-ip.com, or drop your own `country.mmdb` and `asn.mmdb` (DB-IP Lite or MaxMind GeoLite2) in `data/geoip/`. Nothing is downloaded without that click.
 - Ban history is kept 365 days by default, then purged (`BAN_HISTORY_DAYS`, `0` keeps everything): it holds personal data.
 - AI agents (MCP) can no longer ban private, local or link-local addresses, networks that contain them, or an address a user is signed in from. Each refusal is written to the audit log.
+- Docker image and `docker-compose.yml` for external mode: host network, listens on 127.0.0.1, host fail2ban socket, database and configuration mounted, data in `./data`. The server now serves the built web app in production.
 - Dashboard: per instance, its state, bans and addresses over 24 hours, active bans, addresses banned more than once in 24 hours with their origin, and the top countries. Works from BanviewR's history while fail2ban is down.
 - Notifications (new admin page): send new bans and manual actions to a JSON webhook, Discord or Telegram. Off until an admin creates a destination; the page says what leaves the server. New bans are grouped per minute and old bans being imported send nothing. Test button, last send status, enable and disable.
 - Address page: click an address on the Jails or Statistics page to see its country and network operator, its current bans (with unban) and its whole ban history, with first and last ban and the jails it hit.
@@ -46,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### For developers
 
 - `server/geoip.ts`: reads `DATA_DIR/geoip/{country,asn}.mmdb` with `mmdb-lib` (new dependency), picks up a new file within a minute without restart. `geo` (`{ country, asn, org }` or `null`) added to bans (`locatedBan`), history, threats and top addresses; `countries` added to ban statistics. Same in the MCP tools.
+- `Dockerfile` (Node 22 on Debian trixie, fail2ban 1.1 client only, healthcheck on `/api/health`), CI job building the image (not published). In production the server serves `dist/` with `@fastify/static`, unknown non-API GET paths get `index.html`. CSP without `upgrade-insecure-requests` on the whole app, for plain HTTP on a LAN.
 - Table `webhooks` (migration `0006`), `server/notifications.ts` (fire and forget, 10 s timeout, no redirects, errors kept in `last_error` without the URL). Routes `GET/POST /api/webhooks`, `PATCH/DELETE /api/webhooks/:id`, `POST /api/webhooks/:id/test`, signed-in admin only and audited. The URL path and the Telegram token are never returned. Discord messages cannot mention anyone, Telegram messages are plain text.
 - `BAN_HISTORY_DAYS` (default 365): old `ban_events` are purged on each sync round, and the sync no longer imports bans older than the limit. `checkAgentBan()` in `server/jailOps.ts` holds the MCP ban rules.
 - `GET /api/geoip` (read) and `POST /api/geoip/download` (admin session only, 3 per 10 minutes, audited as `geoip.download`).

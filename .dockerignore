@@ -1,0 +1,16 @@
+.git
+.github
+node_modules
+dist
+data
+data-test
+.env
+.env.*
+*.db
+*.log
+.claude
+CLAUDE.md
+IDEE.md
+PLAN.md
+CAHIER_DES_CHARGES.md
+commit-message.txt

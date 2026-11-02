@@ -60,6 +60,19 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 
 Layout: `server/` (API), `web/` (UI), `shared/` (schemas and types used by both).
 
+## Install with Docker
+
+External mode: BanviewR drives the fail2ban already installed on the machine (socket, database and configuration mounted from the host).
+
+```bash
+git clone https://github.com/Erreur32/BanviewR.git && cd BanviewR
+docker compose up -d --build
+```
+
+Then open `http://127.0.0.1:3025` on that machine and create the first admin account. The container uses the host network and listens on `127.0.0.1` only: put a reverse proxy with HTTPS in front of it to reach it from elsewhere, or set `HOST` in `docker-compose.yml` at your own risk. Data (database, GeoIP files) lives in `./data`.
+
+The container runs as root, because fail2ban's socket is root-only. It never starts a fail2ban server of its own.
+
 ## Development
 
 Requirements: Node.js 22+.

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyServerOptions } from 'fastify';
@@ -19,8 +21,16 @@ import { mcpRoutes } from './routes/mcp.ts';
 import { tokenRoutes } from './routes/tokens.ts';
 import { userRoutes } from './routes/users.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
+import { serveWebApp } from './webApp.ts';
 
-export type AppDeps = { connect: ConnectorFactory; detection: LocalDetection; mcpWrite: boolean; geo: GeoIp };
+export type AppDeps = {
+  connect: ConnectorFactory;
+  detection: LocalDetection;
+  mcpWrite: boolean;
+  geo: GeoIp;
+  // Built web app folder, served when set
+  webRoot?: string;
+};
 
 declare module 'fastify' {
   interface FastifyInstance extends AppDeps {
@@ -38,9 +48,10 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
   app.decorate('mcpWrite', deps.mcpWrite);
   app.decorate('geo', deps.geo);
   app.addHook('onClose', async () => db.$client.close());
-  registerErrorHandling(app);
+  registerErrorHandling(app, deps.webRoot && readFileSync(join(deps.webRoot, 'index.html'), 'utf8'));
 
-  await app.register(helmet);
+  // The app is often reached over plain HTTP on a LAN, where upgrading would block its own assets
+  await app.register(helmet, { contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } } });
   // Per IP, auth routes set a stricter limit
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   await registerAccessControl(app);
@@ -61,5 +72,6 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
     },
     { prefix: '/api' },
   );
+  if (deps.webRoot) await serveWebApp(app, deps.webRoot);
   return app;
 }
