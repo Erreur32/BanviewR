@@ -22,4 +22,4 @@ jobs:
           fetch-depth: 0
       # Skipped until the SONAR_TOKEN secret is set, instead of failing every PR
       - if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
+        uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
