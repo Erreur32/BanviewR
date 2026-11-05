@@ -185,7 +185,15 @@ export function ErrorText({ children }: { children: ReactNode }) {
 const LOGO_CELLS = [4, 24, 44];
 
 // One banned cell among the others, same drawing as public/favicon.svg
-export function Logo({ size, className = '' }: { size: number; className?: string }) {
+export function Logo({
+  size,
+  className = '',
+  iconOnly = false,
+}: {
+  size: number;
+  className?: string;
+  iconOnly?: boolean;
+}) {
   return (
     <span
       role="img"
@@ -207,10 +215,12 @@ export function Logo({ size, className = '' }: { size: number; className?: strin
           )),
         )}
       </svg>
-      <span>
-        <span className="text-muted">[</span>ban<span className="text-danger">view</span>r
-        <span className="text-muted">]</span>
-      </span>
+      {!iconOnly && (
+        <span>
+          <span className="text-muted">[</span>ban<span className="text-danger">view</span>r
+          <span className="text-muted">]</span>
+        </span>
+      )}
     </span>
   );
 }

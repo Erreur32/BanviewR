@@ -16,6 +16,15 @@ export const password = z.string().min(10).max(256);
 
 export const credentials = z.object({ username, password });
 
+// PNG, JPEG or WebP; the web app sends a 256 px square well under this
+export const AVATAR_MAX_BYTES = 256 * 1024;
+export const avatarUpload = z.object({
+  image: z
+    .string()
+    .max(Math.ceil(AVATAR_MAX_BYTES / 3) * 4)
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'base64'),
+});
+
 const isTimeZone = (tz: string) => {
   try {
     new Intl.DateTimeFormat('en', { timeZone: tz });
@@ -27,7 +36,14 @@ const isTimeZone = (tz: string) => {
 // 'browser' follows the browser time zone, anything else is an IANA name (Europe/Paris, UTC...)
 export const timezone = z.union([z.literal('browser'), z.string().max(64).refine(isTimeZone, 'Unknown time zone')]);
 
-export const userInfo = z.object({ id: z.number(), username: z.string(), role, timezone: z.string() });
+// avatarAt: when the picture was set, null shows initials
+export const userInfo = z.object({
+  id: z.number(),
+  username: z.string(),
+  role,
+  timezone: z.string(),
+  avatarAt: z.string().nullable(),
+});
 export type UserInfo = z.infer<typeof userInfo>;
 
 export const authStatus = z.object({

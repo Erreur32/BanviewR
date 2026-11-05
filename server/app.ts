@@ -15,6 +15,7 @@ import { notifyEmbeddedStop } from './notifications.ts';
 import { registerOpenApi } from './openapi.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
+import { avatarRoutes } from './routes/avatars.ts';
 import { blocklistRoutes } from './routes/blocklists.ts';
 import { embeddedRoutes } from './routes/embedded.ts';
 import { geoipRoutes } from './routes/geoip.ts';
@@ -93,6 +94,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       await api.register(healthRoutes);
       await api.register(authRoutes);
       await api.register(userRoutes);
+      await api.register(avatarRoutes);
       await api.register(tokenRoutes);
       await api.register(auditRoutes);
       await api.register(hostRoutes);

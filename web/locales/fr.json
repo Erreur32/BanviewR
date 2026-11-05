@@ -31,7 +31,9 @@
       "admin": "Administration"
     },
     "addresses": "Adresses",
-    "live": "En direct"
+    "live": "En direct",
+    "collapse": "Réduire le menu",
+    "expand": "Déplier le menu"
   },
   "roles": {
     "admin": "Admin",
@@ -147,7 +149,13 @@
     "currentPassword": "Mot de passe actuel",
     "newPassword": "Nouveau mot de passe",
     "passwordSubmit": "Changer le mot de passe",
-    "passwordChanged": "Mot de passe changé, vos autres sessions sont déconnectées."
+    "passwordChanged": "Mot de passe changé, vos autres sessions sont déconnectées.",
+    "avatarTitle": "Photo de profil",
+    "avatarIntro": "Sans photo, vos initiales s'affichent. PNG, JPEG ou WebP : l'image est recadrée en carré et réduite dans le navigateur, sans ses métadonnées (appareil, position).",
+    "avatarPick": "Choisir une image",
+    "avatarRemove": "Retirer la photo",
+    "avatarTooBig": "Image trop lourde (10 Mo au plus).",
+    "avatarUnreadable": "Image illisible, essayez un autre fichier."
   },
   "users": {
     "title": "Utilisateurs",
@@ -165,7 +173,9 @@
     "resetPassword": "Nouveau mot de passe",
     "newPasswordFor": "Nouveau mot de passe pour {{username}}",
     "passwordResetHint": "10 caractères minimum. Ses sessions ouvertes seront déconnectées.",
-    "passwordReset": "Mot de passe de {{username}} changé."
+    "passwordReset": "Mot de passe de {{username}} changé.",
+    "removeAvatar": "Retirer la photo",
+    "avatarRemoved": "Photo de {{username}} retirée."
   },
   "tokens": {
     "title": "Jetons d'API",

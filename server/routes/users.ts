@@ -20,6 +20,7 @@ const toUserRow = (u: typeof users.$inferSelect) => ({
   username: u.username,
   role: u.role,
   timezone: u.timezone,
+  avatarAt: toIso(u.avatarAt),
   createdAt: u.createdAt.toISOString(),
   lastLoginAt: toIso(u.lastLoginAt),
 });

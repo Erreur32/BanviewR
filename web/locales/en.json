@@ -31,7 +31,9 @@
       "admin": "Administration"
     },
     "addresses": "Addresses",
-    "live": "Live"
+    "live": "Live",
+    "collapse": "Collapse the menu",
+    "expand": "Expand the menu"
   },
   "roles": {
     "admin": "Admin",
@@ -147,7 +149,13 @@
     "currentPassword": "Current password",
     "newPassword": "New password",
     "passwordSubmit": "Change password",
-    "passwordChanged": "Password changed, your other sessions are signed out."
+    "passwordChanged": "Password changed, your other sessions are signed out.",
+    "avatarTitle": "Profile picture",
+    "avatarIntro": "Without a picture, your initials show. PNG, JPEG or WebP: the picture is cropped to a square and scaled down in the browser, without its metadata (camera, location).",
+    "avatarPick": "Choose a picture",
+    "avatarRemove": "Remove the picture",
+    "avatarTooBig": "Picture too large (10 MB at most).",
+    "avatarUnreadable": "Unreadable picture, try another file."
   },
   "users": {
     "title": "Users",
@@ -165,7 +173,9 @@
     "resetPassword": "New password",
     "newPasswordFor": "New password for {{username}}",
     "passwordResetHint": "At least 10 characters. Their open sessions will be signed out.",
-    "passwordReset": "Password of {{username}} changed."
+    "passwordReset": "Password of {{username}} changed.",
+    "removeAvatar": "Remove picture",
+    "avatarRemoved": "Picture of {{username}} removed."
   },
   "tokens": {
     "title": "API tokens",

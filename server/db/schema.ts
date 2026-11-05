@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import type { Role, Scope } from '../../shared/auth.ts';
 
 const createdAt = () => integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`);
@@ -31,10 +31,22 @@ export const users = sqliteTable(
     timezone: text('timezone').notNull().default('browser'),
     createdAt: createdAt(),
     lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
+    // When the picture in avatars was set, null = initials. Also busts the browser cache.
+    avatarAt: integer('avatar_at', { mode: 'timestamp' }),
   },
   // 'admin' and 'Admin' are the same account
   (t) => [uniqueIndex('users_username_nocase').on(sql`lower(${t.username})`)],
 );
+
+// Kept out of users so listing accounts never loads pictures
+export const avatars = sqliteTable('avatars', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  // Found from the file's first bytes, never taken from the client
+  type: text('type', { enum: ['image/png', 'image/jpeg', 'image/webp'] }).notNull(),
+  data: blob('data', { mode: 'buffer' }).notNull(),
+});
 
 // id is the SHA-256 of the cookie token, the token itself is never stored
 export const sessions = sqliteTable('sessions', {

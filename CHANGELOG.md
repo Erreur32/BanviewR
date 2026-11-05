@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-05
+
+### For users
+
+- Profile pictures: initials in a colour of their own by default, or a PNG, JPEG or WebP picture chosen in Preferences. The browser crops it to a 256 px square and encodes it again, which drops its metadata (camera, location). It shows in the menu and in the user list, where an admin can remove someone's picture.
+- New sidebar menu: icons, quiet group titles that fold (Administration folded at first, the group of the page on screen stays open), the signed-in account at the bottom with sign-out, and a button that shrinks the menu to an icon rail. Folds and rail are remembered per browser.
+
+### Security
+
+- Pictures are checked from their first bytes on the server (PNG, JPEG or WebP only, never SVG), 256 KB at most, uploaded from a signed-in session only, and served with their own type and a `sandbox` content security policy.
+
+### For developers
+
+- `POST` and `DELETE /api/auth/avatar` (session only), `GET /api/users/:id/avatar` (the picture itself, the one route without the JSON envelope), `DELETE /api/users/:id/avatar` (admin session). `avatarAt` in the user info tells when the picture was set, `null` for initials.
+
 ## [0.2.2] - 2026-11-05
 
 ### Security
