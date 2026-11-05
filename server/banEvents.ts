@@ -62,6 +62,8 @@ export function startBanSync(app: FastifyInstance, historyDays: number) {
         const purged = purgeBans(app.db, host.id, cutoff);
         if (purged > 0) app.log.info({ hostId: host.id, purged }, 'Old bans purged');
       }
+      // Catches up on its own once the agent is back
+      if (host.mode === 'agent' && !app.agents.online(host.id)) continue;
       try {
         const added = await syncBans(app.db, app.connect(host), host.id, cutoff, (rows) =>
           notifyBans(app.db, app.geo.locate, host.id, rows),

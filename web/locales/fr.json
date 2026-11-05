@@ -135,7 +135,8 @@
       "topCountry": "Pays en tête :",
       "noJails": "fail2ban ne répond pas : jails inconnus pour l'instant."
     },
-    "historyOnly": "historique seul, sans socket"
+    "historyOnly": "historique seul, sans socket",
+    "agentOffline": "agent hors ligne"
   },
   "prefs": {
     "title": "Préférences",
@@ -277,7 +278,8 @@
     "error": {
       "UNREACHABLE": "Injoignable (accès au socket refusé ou fail2ban arrêté)",
       "CLIENT_MISSING": "fail2ban-client manquant",
-      "NO_SOCKET": "Pas de socket : historique et bans en cours lus dans la base seulement"
+      "NO_SOCKET": "Pas de socket : historique et bans en cours lus dans la base seulement",
+      "AGENT_OFFLINE": "Agent hors ligne"
     },
     "edit": "Modifier",
     "createTitle": "Nouvelle instance",
@@ -332,6 +334,29 @@
         "understood": "J'ai compris, je garde un accès de secours",
         "start": "Démarrer l'essai"
       }
+    },
+    "agent": {
+      "title": "Ajouter un agent (autre machine)",
+      "intro": "Un agent tourne en Docker sur une autre machine qui a fail2ban. Il se connecte lui-même à ce serveur, en chiffré, sans port à ouvrir chez lui. Il ne fait que lire : jails, bans en cours, historique, pare-feu.",
+      "nameHint": "Le nom de la machine, par exemple myoueb.",
+      "create": "Créer le code d'inscription",
+      "codeTitle": "Agent {{name}} : fichier à installer",
+      "codeWarning": "Le code est à usage unique et valable jusqu'à {{time}}. Il ne sera plus affiché : copiez le fichier maintenant.",
+      "step1": "Sur la machine qui a fail2ban, créez un dossier et enregistrez-y ce fichier sous le nom docker-compose.yml.",
+      "step2": "Dans ce dossier, lancez",
+      "step3": "L'instance passe « en ligne » ici en quelques secondes.",
+      "centralUrl": "Adresse de ce serveur vue par l'agent",
+      "centralHint": "En https. L'agent refuse http, sauf AGENT_ALLOW_INSECURE=true pour un test.",
+      "copy": "Copier le fichier",
+      "copied": "Fichier copié.",
+      "done": "C'est fait",
+      "pending": "En attente de l'agent",
+      "waiting": "Agent pas encore inscrit",
+      "details": "Agent v{{version}}, lecture seule",
+      "online": "En ligne",
+      "lastSeen": "Vu le {{time}}",
+      "codeUntil": "Code valable jusqu'à {{time}}",
+      "newCode": "Nouveau code"
     }
   },
   "jails": {

@@ -2,18 +2,24 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
+import { eq } from 'drizzle-orm';
 import Fastify, { type FastifyServerOptions } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import type { LocalDetection } from '../shared/hosts.ts';
+import { type AgentHub, createAgentHub } from './agentHub.ts';
 import { recordAudit } from './audit.ts';
 import { registerAccessControl } from './auth/access.ts';
+import { agentConnector } from './connectors/agent.ts';
 import type { ConnectorFactory } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
+import { agents } from './db/schema.ts';
 import { createEmbedded, type Embedded, type EmbeddedOptions, settingsStore } from './embedded.ts';
 import { registerErrorHandling } from './errors.ts';
 import type { GeoIp } from './geoip.ts';
 import { notifyEmbeddedStop } from './notifications.ts';
 import { registerOpenApi } from './openapi.ts';
+import { agentRoutes } from './routes/agents.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
 import { avatarRoutes } from './routes/avatars.ts';
@@ -43,6 +49,7 @@ declare module 'fastify' {
   interface FastifyInstance extends Omit<AppDeps, 'embedded'> {
     db: Db;
     embedded: Embedded;
+    agents: AgentHub;
   }
 }
 
@@ -51,8 +58,17 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.decorate('db', db);
+  app.decorate(
+    'agents',
+    createAgentHub(app.log, (hostId, presence) => {
+      const seen = { lastSeenAt: new Date() };
+      const values = presence ? { ...seen, version: presence.version, writeEnabled: presence.write } : seen;
+      db.update(agents).set(values).where(eq(agents.hostId, hostId)).run();
+    }),
+  );
   // A jail started or reloaded on the embedded fail2ban gets the base ignoreip back at once, not a minute later
   app.decorate('connect', (host) => {
+    if (host.mode === 'agent') return agentConnector(app.agents, host);
     const connector = deps.connect(host);
     if (host.mode !== 'embedded') return connector;
     return {
@@ -88,6 +104,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
     }),
   );
   app.addHook('onClose', async () => {
+    app.agents.close();
     // Kept enabled: it comes back with the next start
     await app.embedded.stop(true);
     db.$client.close();
@@ -98,6 +115,8 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
   await app.register(helmet, { contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } } });
   // Per IP, auth routes set a stricter limit
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  // Agents send large pages of bans and firewall dumps
+  await app.register(websocket, { options: { maxPayload: 16 * 1024 * 1024 } });
   await registerAccessControl(app);
   await registerOpenApi(app);
 
@@ -116,6 +135,7 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       await api.register(webhookRoutes);
       await api.register(blocklistRoutes);
       await api.register(embeddedRoutes);
+      await api.register(agentRoutes);
     },
     { prefix: '/api' },
   );

@@ -21,19 +21,34 @@ export const hostStatus = z.object({
   reachable: z.boolean(),
   version: z.string().nullable(),
   // NO_SOCKET: nothing at the socket path, only the history and current bans of the database are read
-  error: z.enum(['NO_SOCKET', 'CLIENT_MISSING', 'UNREACHABLE']).nullable(),
+  // AGENT_OFFLINE: the instance's agent is not connected to this server
+  error: z.enum(['NO_SOCKET', 'CLIENT_MISSING', 'UNREACHABLE', 'AGENT_OFFLINE']).nullable(),
 });
 export type HostStatus = z.infer<typeof hostStatus>;
+
+// What the Instances page shows about an agent
+export const agentInfo = z.object({
+  enrolled: z.boolean(),
+  online: z.boolean(),
+  version: z.string().nullable(),
+  write: z.boolean(),
+  lastSeenAt: z.string().nullable(),
+  // A pending enrolment code is valid until then
+  codeExpiresAt: z.string().nullable(),
+});
+export type AgentInfo = z.infer<typeof agentInfo>;
 
 export const hostRow = z.object({
   id: z.number(),
   name: z.string(),
-  mode: z.enum(['external', 'embedded']),
+  mode: z.enum(['external', 'embedded', 'agent']),
   socketPath: z.string(),
   dbPath: z.string(),
   confPath: z.string(),
   createdAt: z.string(),
   status: hostStatus,
+  // Only for agent instances
+  agent: agentInfo.nullable(),
 });
 export type HostRow = z.infer<typeof hostRow>;
 

@@ -4,12 +4,12 @@ import type { Role, Scope } from '../../shared/auth.ts';
 
 const createdAt = () => integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`);
 
-// A fail2ban instance driven by this UI. Only the local host exists in v0.1,
-// the table is there so multi-host does not need a schema rewrite.
+// A fail2ban instance driven by this UI: on this machine (external, embedded) or behind an agent.
+// An agent row has empty paths, the agent knows its own.
 export const hosts = sqliteTable('hosts', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
-  mode: text('mode', { enum: ['external', 'embedded'] })
+  mode: text('mode', { enum: ['external', 'embedded', 'agent'] })
     .notNull()
     .default('external'),
   socketPath: text('socket_path').notNull(),
@@ -80,6 +80,22 @@ export const settings = sqliteTable('settings', {
 });
 
 // API tokens for scripts and MCP. Only the SHA-256 of the secret is stored.
+// The agent behind a host row. Only hashes are kept: the enrolment code (one use, short-lived)
+// is traded for the agent's own secret, which it sends on every connection.
+export const agents = sqliteTable('agents', {
+  hostId: integer('host_id')
+    .primaryKey()
+    .references(() => hosts.id, { onDelete: 'cascade' }),
+  secretHash: text('secret_hash').unique(),
+  enrollHash: text('enroll_hash').unique(),
+  enrollExpiresAt: integer('enroll_expires_at', { mode: 'timestamp' }),
+  enrolledAt: integer('enrolled_at', { mode: 'timestamp' }),
+  lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }),
+  // Last version and write switch the agent announced
+  version: text('version'),
+  writeEnabled: integer('write_enabled', { mode: 'boolean' }).notNull().default(false),
+});
+
 export const apiTokens = sqliteTable('api_tokens', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
