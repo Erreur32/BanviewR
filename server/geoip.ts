@@ -3,7 +3,7 @@ import { isIP } from 'node:net';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { type AsnResponse, type CountryResponse, Reader } from 'mmdb-lib';
-import type { CountryCount, GeoDbStatus, IpGeo } from '../shared/geoip.ts';
+import type { CountryCount, GeoDbStatus, IpGeo, OrgCount } from '../shared/geoip.ts';
 import { AppError } from './errors.ts';
 
 const KINDS = ['country', 'asn'] as const;
@@ -134,16 +134,22 @@ export function openGeoIp(dir: string | null) {
 
 export type GeoIp = ReturnType<typeof openGeoIp>;
 
-// Bans per country, addresses with no known country left out
-export function countByCountry(locate: Locate, ipCounts: { ip: string; count: number }[]): CountryCount[] {
-  const countries = new Map<string, CountryCount>();
+// Bans and addresses per key of the location, addresses with no key left out
+function tally(locate: Locate, ipCounts: { ip: string; count: number }[], keyOf: (geo: IpGeo) => string | null) {
+  const rows = new Map<string, { key: string; bans: number; ips: number }>();
   for (const { ip, count } of ipCounts) {
-    const country = locate(ip)?.country;
-    if (!country) continue;
-    const row = countries.get(country) ?? { country, bans: 0, ips: 0 };
+    const key = keyOf(locate(ip));
+    if (!key) continue;
+    const row = rows.get(key) ?? { key, bans: 0, ips: 0 };
     row.bans += count;
     row.ips += 1;
-    countries.set(country, row);
+    rows.set(key, row);
   }
-  return [...countries.values()].sort((a, b) => b.bans - a.bans);
+  return [...rows.values()].sort((a, b) => b.bans - a.bans);
 }
+
+export const countByCountry = (locate: Locate, ipCounts: { ip: string; count: number }[]): CountryCount[] =>
+  tally(locate, ipCounts, (geo) => geo?.country ?? null).map(({ key, ...row }) => ({ country: key, ...row }));
+
+export const countByOrg = (locate: Locate, ipCounts: { ip: string; count: number }[]): OrgCount[] =>
+  tally(locate, ipCounts, (geo) => geo?.org ?? null).map(({ key, ...row }) => ({ org: key, ...row }));

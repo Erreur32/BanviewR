@@ -26,3 +26,7 @@ export type GeoDbStatus = z.infer<typeof geoDbStatus>;
 
 export const countryCount = z.object({ country: z.string(), bans: z.number(), ips: z.number() });
 export type CountryCount = z.infer<typeof countryCount>;
+
+// Network operator (ASN name), from the same local database
+export const orgCount = z.object({ org: z.string(), bans: z.number(), ips: z.number() });
+export type OrgCount = z.infer<typeof orgCount>;

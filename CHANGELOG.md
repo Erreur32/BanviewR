@@ -11,11 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Embedded fail2ban, first part of v0.2: when the machine has no fail2ban, an admin can start one inside the BanviewR container from the Instances page, and stop it. It comes back with the container once started, and stops for good when a host fail2ban shows up (never both at once). Its configuration and database live in `DATA_DIR/fail2ban/`, with loopback, private ranges and Docker networks always in `ignoreip`.
 - Locked by default: it only starts inside a container and with `EMBEDDED_ALLOWED=true`.
+- Dashboard with two modes, switched at the top of the page and remembered in the browser. Simple: a few big figures, latest alerts, bans per day over 7 days, health rings, worst addresses, jails, and a one-word summary. Full: six figures with the trend against the 24 hours before, a threat band (addresses by how often they came back), bans per hour stacked by jail, share per jail, bans per day over 14 days, instances, top addresses, countries and network operators, latest bans.
+- Each jail keeps the same color everywhere (sshd and recidive always first), checked for contrast and color blindness.
 
 ### For developers
 
 - `GET /api/embedded`, `POST /api/embedded/start` and `POST /api/embedded/stop`: signed-in admins only (API tokens refused), rate limited, audited.
 - `F2B_CLIENT` sets the fail2ban client command.
+- `/api/hosts/:hostId/stats`: `slots` are now split per jail (`{ at, jail, bans }`), and a new `orgs` list counts bans per network operator.
+- Hand-written chart pieces in `web/components/charts.tsx` (stacked bars with tooltip, donut, ring, bar list, sparkline) and a `Segmented` switch in `web/components/ui.tsx`.
 - `npm run dev:embedded -- start|stop|logs`: BanviewR with its embedded fail2ban in a container with its own network namespace, for development. `scripts/dev-f2b-client.sh` lets a dev server on the host reach it without a local fail2ban.
 
 ## [0.1.1] - 2026-11-05

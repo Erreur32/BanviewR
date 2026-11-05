@@ -126,6 +126,7 @@ describe('ban stats', () => {
       uniqueIps: 0,
       topIps: [],
       countries: [],
+      orgs: [],
       topJails: [],
       slots: [],
     });
