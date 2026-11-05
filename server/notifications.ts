@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import type { LocalDetection } from '../shared/hosts.ts';
 import type { Caller } from './audit.ts';
 import type { Db } from './db/index.ts';
 import { hosts, webhooks } from './db/schema.ts';
@@ -23,10 +24,13 @@ type Notice =
       bans: { ip: string; jail: string; bannedAt: string; bantime: number; failures: number; country: string | null }[];
     }
   | { event: 'action'; instance: string; action: string; target: string; jail: string | null; actor: string }
+  | { event: 'embedded'; state: 'stopped'; reason: 'HOST_FAIL2BAN'; found: LocalDetection['reason'] }
   | { event: 'test' };
 
 function text(n: Notice) {
   if (n.event === 'test') return 'BanviewR: test notification';
+  if (n.event === 'embedded')
+    return `BanviewR: embedded fail2ban stopped, a fail2ban appeared on the machine (${n.found}). Never both at once.`;
   if (n.event === 'action')
     return `BanviewR ${n.instance}: ${n.actor} ${n.action} ${n.target}${n.jail ? ` in ${n.jail}` : ''}`;
   const lines = n.bans.slice(0, MAX_LINES).map((b) => `${b.ip}${b.country ? ` (${b.country})` : ''} in ${b.jail}`);
@@ -135,4 +139,9 @@ export function notifyAction(
     jail,
     actor: caller.principal?.name ?? 'system',
   });
+}
+
+// Sent with the manual actions: it is a change nobody asked for in the UI
+export function notifyEmbeddedStop(db: Db, detection: LocalDetection) {
+  dispatch(db, 'onActions', { event: 'embedded', state: 'stopped', reason: 'HOST_FAIL2BAN', found: detection.reason });
 }

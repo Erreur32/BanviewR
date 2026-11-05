@@ -1,12 +1,16 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execFile, spawn } from 'node:child_process';
 import { lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import { join, resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { promisify } from 'node:util';
 import { eq } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
-import type { EmbeddedBlock, EmbeddedStatus, LocalDetection } from '../shared/hosts.ts';
+import { jailName } from '../shared/fail2ban.ts';
+import type { EmbeddedBlock, EmbeddedFirewall, EmbeddedStatus, LocalDetection } from '../shared/hosts.ts';
 import { socketListens } from './connectors/detect.ts';
+import { dump, parseJailList } from './connectors/local.ts';
 import type { Db } from './db/index.ts';
 import { settings } from './db/schema.ts';
 import { AppError } from './errors.ts';
@@ -68,9 +72,42 @@ export function embeddedPaths(dataDir: string) {
     pidFile: join(root, 'fail2ban.pid'),
     dbPath: join(root, 'fail2ban.sqlite3'),
     logPath: join(root, 'fail2ban.log'),
+    // Put first in the server's PATH when the host firewall is iptables-legacy
+    binDir: join(root, 'bin'),
   };
 }
 type Paths = ReturnType<typeof embeddedPaths>;
+
+const hasRules = (save: string | null) => !!save && /^-A /m.test(save);
+const hasDockerUser = (save: string | null) => !!save && /^:DOCKER-USER /m.test(save);
+
+// Same backend as the host, told by where Docker's rules are. Rules in the other iptables backend would
+// still apply, but DOCKER-USER only exists where Docker made it, and a mixed firewall is hard to read.
+// Inputs are the filter table of each iptables backend (null: not loaded or not readable) and `nft list tables`.
+export function pickFirewall(fw: { legacy: string | null; nft: string | null; nftTables: string | null }) {
+  const pick = (backend: EmbeddedFirewall['backend'], dockerUser = false): EmbeddedFirewall => ({
+    backend,
+    dockerUser,
+  });
+  if (hasDockerUser(fw.legacy)) return pick('iptables-legacy', true);
+  if (hasDockerUser(fw.nft)) return pick('iptables-nft', true);
+  if (hasRules(fw.legacy)) return pick('iptables-legacy');
+  if (fw.nft && /^\*filter/m.test(fw.nft)) return pick('iptables-nft');
+  // A firewall written in nftables only (no Docker, or Docker with its nftables backend)
+  if (fw.nftTables?.trim()) return pick('nftables');
+  return pick('iptables-nft');
+}
+
+export async function detectFirewall() {
+  // Asking the legacy tool for a table that is not loaded would load its module on the host
+  const legacyTables = await readFile('/proc/net/ip_tables_names', 'utf8').catch(() => '');
+  const [legacy, nft, nftTables] = await Promise.all([
+    /^filter$/m.test(legacyTables) ? dump('iptables-legacy-save', ['-t', 'filter']) : null,
+    dump('iptables-nft-save', ['-t', 'filter']),
+    dump('nft', ['list', 'tables']),
+  ]);
+  return pickFirewall({ legacy, nft, nftTables });
+}
 
 // fail2ban interpolates %(name)s in values: a literal % is written %%
 function iniValue(value: string) {
@@ -85,7 +122,10 @@ const HEADER = `# Written by BanviewR at every start of the embedded fail2ban: c
 // Stock files (jail.conf, filter.d, action.d, paths-*.conf) are linked from the image, so they follow
 // its upgrades. jail.d and fail2ban.d are not: Debian's defaults-debian.conf enables sshd on the journal,
 // which a container does not have, and a jail that cannot start stops the whole server.
-export function writeBaseConfig(paths: Paths, { stockDir, ignoreip }: { stockDir: string; ignoreip: string[] }) {
+export function writeBaseConfig(
+  paths: Paths,
+  { stockDir, ignoreip, firewall = null }: { stockDir: string; ignoreip: string[]; firewall?: EmbeddedFirewall | null },
+) {
   mkdirSync(join(paths.confDir, 'jail.d'), { recursive: true });
   for (const entry of readdirSync(stockDir)) {
     if (entry === 'jail.d' || entry === 'fail2ban.d' || entry.endsWith('.local')) continue;
@@ -108,8 +148,13 @@ pidfile = ${iniValue(paths.pidFile)}
 dbfile = ${iniValue(paths.dbPath)}
 `,
   );
+  // A .conf file: read before jail.local and the jail.d/*.local files, so the admin's own banaction wins
+  writeFileSync(
+    join(paths.confDir, 'jail.d', '00-banviewr.conf'),
+    `${HEADER}\n[DEFAULT]\n${firewallDefaults(firewall)}`,
+  );
   // In jail.d with a 00 prefix: read after jail.conf and jail.local, so their [DEFAULT] cannot drop it.
-  // shortcut: a jail that sets its own ignoreip still replaces this list, check jails on start in the next slice
+  // A jail that sets its own ignoreip replaces this list: keepIgnoreip adds the base back at run time.
   writeFileSync(
     join(paths.confDir, 'jail.d', '00-banviewr.local'),
     `${HEADER}
@@ -118,6 +163,55 @@ ignoreself = true
 ignoreip = ${ignoreip.map(iniValue).join(' ')}
 `,
   );
+}
+
+// DOCKER-USER sees the traffic forwarded to containers after DNAT, so the container port, not the
+// published one: the extra action bans on every port. Jails with their own `action` add %(action_docker)s.
+function firewallDefaults(fw: EmbeddedFirewall | null) {
+  const lines: string[] = [];
+  if (fw?.backend === 'nftables') lines.push('banaction = nftables', 'banaction_allports = nftables[type=allports]');
+  if (fw?.dockerUser) {
+    lines.push(
+      'action_docker = iptables-allports[name="%(__name__)s-du", chain="DOCKER-USER", protocol="all"]',
+      'action = %(action_)s',
+      '         %(action_docker)s',
+    );
+  }
+  return lines.map((l) => `${l}\n`).join('');
+}
+
+// The iptables actions run `iptables`: on a legacy host it must be iptables-legacy, for the server only
+function firewallEnv(paths: Paths, fw: EmbeddedFirewall | null) {
+  rmSync(paths.binDir, { recursive: true, force: true });
+  if (fw?.backend !== 'iptables-legacy') return undefined;
+  mkdirSync(paths.binDir, { recursive: true });
+  for (const cmd of ['iptables', 'ip6tables']) symlinkSync(`/usr/sbin/${cmd}-legacy`, join(paths.binDir, cmd));
+  return { ...process.env, PATH: `${paths.binDir}:${process.env.PATH ?? '/usr/sbin:/usr/bin:/sbin:/bin'}` };
+}
+
+export type Client = (args: string[]) => Promise<string>;
+
+// `get <jail> ignoreip` prints one "|- entry" (or "`- entry" for the last) line each
+export const parseIgnoreList = (out: string) =>
+  out
+    .split('\n')
+    .map((l) => l.match(/^\s*[|`]-\s*(\S+)/)?.[1])
+    .filter((ip): ip is string => ip !== undefined);
+
+// A jail with its own ignoreip drops the base list: add back what it lacks. Returns "jail entry" per add.
+export async function keepIgnoreip(client: Client, ignoreip: string[]) {
+  const added: string[] = [];
+  for (const jail of parseJailList(await client(['status']))) {
+    // Names come from fail2ban, but end up as arguments
+    if (!jailName.safeParse(jail).success) continue;
+    const have = new Set(parseIgnoreList(await client(['get', jail, 'ignoreip'])));
+    for (const ip of ignoreip) {
+      if (have.has(ip)) continue;
+      await client(['set', jail, 'addignoreip', ip]);
+      added.push(`${jail} ${ip}`);
+    }
+  }
+  return added;
 }
 
 type Store = { enabled(): boolean; setEnabled(on: boolean): void };
@@ -140,10 +234,19 @@ export type EmbeddedOptions = {
   inContainer: boolean;
   // Fresh host fail2ban detection, leaving out the given processes (the embedded server itself)
   detect: (ignorePids: number[]) => Promise<LocalDetection>;
+  // Host firewall check on each start, left out in tests (status firewall stays null)
+  firewall?: () => Promise<EmbeddedFirewall>;
+  // Told when a host fail2ban turns the embedded one off
+  onHostStop?: (detection: LocalDetection) => void;
   serverBin?: string;
+  clientBin?: string;
+  // Stands in for clientBin in tests
+  client?: Client;
   stockDir?: string;
   readyTimeoutMs?: number;
 };
+
+const run = promisify(execFile);
 
 type Run = { proc: ChildProcess; startedAt: Date; ended: Promise<string>; stopping: boolean };
 
@@ -158,6 +261,14 @@ export function createEmbedded(
   let current: Run | null = null;
   let stopReason: EmbeddedStatus['stopReason'] = null;
   let lastError: string | null = null;
+  let firewall: EmbeddedFirewall | null = null;
+  let ignoreip: string[] = [];
+  const client: Client =
+    opts.client ??
+    ((args) =>
+      run(opts.clientBin ?? 'fail2ban-client', ['-s', paths.socketPath, ...args], { timeout: 10_000 }).then(
+        (r) => r.stdout,
+      ));
 
   const blockedBy = () => embeddedBlock({ inContainer: opts.inContainer, allowed: opts.allowed, detection });
 
@@ -190,7 +301,9 @@ export function createEmbedded(
     if (Buffer.byteLength(paths.socketPath) > MAX_SOCKET_PATH) {
       throw new AppError('BAD_REQUEST', 'DATA_DIR is too long for the embedded fail2ban socket path');
     }
-    writeBaseConfig(paths, { stockDir, ignoreip: [...BASE_IGNOREIP, ...dockerNetworks()] });
+    firewall = opts.firewall ? await opts.firewall() : null;
+    ignoreip = [...BASE_IGNOREIP, ...dockerNetworks()];
+    writeBaseConfig(paths, { stockDir, ignoreip, firewall });
     stopReason = null;
     lastError = null;
 
@@ -198,6 +311,7 @@ export function createEmbedded(
     // its output and kill it past maxBuffer. -x removes a socket left by a crash.
     const proc = spawn(serverBin, ['-f', '-x', '-c', paths.confDir, '-s', paths.socketPath, '-p', paths.pidFile], {
       stdio: ['ignore', 'ignore', 'pipe'],
+      env: firewallEnv(paths, firewall),
     });
     let stderr = '';
     proc.stderr?.on('data', (chunk) => {
@@ -230,7 +344,20 @@ export function createEmbedded(
       await sleep(250);
     }
     store.setEnabled(true);
-    log.info({ pid: proc.pid, confDir: paths.confDir }, 'Embedded fail2ban started');
+    log.info({ pid: proc.pid, confDir: paths.confDir, firewall }, 'Embedded fail2ban started');
+    await enforceIgnoreip();
+  }
+
+  // shortcut: a jail started or reloaded later runs on its own ignoreip until the next watch tick (1 min),
+  // call this after jail actions on the embedded instance if that window matters
+  async function enforceIgnoreip() {
+    if (!current) return;
+    try {
+      const added = await keepIgnoreip(client, ignoreip);
+      if (added.length) log.info({ added }, 'Base ignoreip added back to jails that set their own');
+    } catch (err) {
+      log.warn({ err }, 'Embedded fail2ban ignoreip check failed');
+    }
   }
 
   const start = () => serial(launch);
@@ -246,15 +373,14 @@ export function createEmbedded(
   async function check() {
     const pid = current?.proc.pid;
     detection = await opts.detect(pid ? [pid] : []);
-    if (detection.mode !== 'external') return;
+    if (detection.mode !== 'external') return enforceIgnoreip();
+    if (!current && !store.enabled()) return;
     if (current) {
       log.warn(detection, 'Host fail2ban found, stopping the embedded one');
       await stop();
-      stopReason = 'HOST_FAIL2BAN';
-    } else if (store.enabled()) {
-      store.setEnabled(false);
-      stopReason = 'HOST_FAIL2BAN';
-    }
+    } else store.setEnabled(false);
+    stopReason = 'HOST_FAIL2BAN';
+    opts.onHostStop?.(detection);
   }
 
   return {
@@ -288,6 +414,7 @@ export function createEmbedded(
       stopReason,
       lastError,
       confDir: paths.confDir,
+      firewall,
     }),
   };
 }

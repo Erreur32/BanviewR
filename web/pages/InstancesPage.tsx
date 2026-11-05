@@ -57,6 +57,12 @@ function EmbeddedCard() {
             )}{' '}
             {embedded.blockedBy && t(`instances.embedded.blocked.${embedded.blockedBy}`)}
           </p>
+          {embedded.firewall && (
+            <p className="text-muted">
+              {t('instances.embedded.firewall', { backend: embedded.firewall.backend })}{' '}
+              {t(embedded.firewall.dockerUser ? 'instances.embedded.dockerUser' : 'instances.embedded.noDockerUser')}
+            </p>
+          )}
           {embedded.stopReason && (
             <p className="text-danger">
               {t(`instances.embedded.stopReason.${embedded.stopReason}`)}

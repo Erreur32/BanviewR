@@ -7,6 +7,7 @@ import { config } from './config.ts';
 import { detectLocalFail2ban } from './connectors/detect.ts';
 import { localConnector } from './connectors/local.ts';
 import { openDb } from './db/index.ts';
+import { detectFirewall } from './embedded.ts';
 import { openGeoIp } from './geoip.ts';
 
 const db = openDb(join(config.dataDir, 'banviewr.db'), {
@@ -29,6 +30,8 @@ const app = await buildApp(
       allowed: config.embeddedAllowed,
       inContainer: existsSync('/.dockerenv'),
       detect: (ignorePids) => detectLocalFail2ban(config.f2bSocket, { ignorePids }),
+      firewall: detectFirewall,
+      clientBin: config.f2bClient,
     },
     mcpWrite: config.mcpWrite,
     geo: openGeoIp(join(config.dataDir, 'geoip')),

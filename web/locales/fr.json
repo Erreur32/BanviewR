@@ -238,6 +238,7 @@
     },
     "reason": {
       "socket": "Le socket fail2ban répond : BanviewR utilise le fail2ban de l'hôte.",
+      "mount": "Le dossier du socket fail2ban de l'hôte a été remplacé depuis le démarrage du conteneur, signe d'un fail2ban sur l'hôte : BanviewR le traite comme tel. Redémarrez le conteneur pour vérifier à nouveau.",
       "process": "Un processus fail2ban-server tourne : BanviewR utilise le fail2ban de l'hôte.",
       "service": "Le service fail2ban est installé : BanviewR utilise le fail2ban de l'hôte.",
       "none": "Aucun fail2ban trouvé au démarrage du serveur : le fail2ban embarqué peut être démarré ci-dessous."
@@ -272,6 +273,9 @@
       "stop": "Arrêter",
       "startDone": "fail2ban embarqué démarré.",
       "stopDone": "fail2ban embarqué arrêté.",
+      "firewall": "Pare-feu de l'hôte : {{backend}}.",
+      "dockerUser": "Les bans vont aussi dans la chaîne DOCKER-USER de Docker : ils touchent les ports publiés des conteneurs.",
+      "noDockerUser": "Pas de chaîne DOCKER-USER : les bans ne touchent pas les ports publiés des conteneurs.",
       "blocked": {
         "NOT_CONTAINER": "Indisponible : BanviewR ne tourne pas dans un conteneur.",
         "NOT_ALLOWED": "Indisponible : mettez EMBEDDED_ALLOWED=true dans l'environnement du conteneur pour l'autoriser.",
@@ -451,7 +455,7 @@
       "mqtt": "mqtt://utilisateur:motdepasse@broker:1883/banviewr/events, ou mqtts:// pour le TLS. Le chemin est le topic. Publie le même JSON que le webhook (MQTT 3.1.1, QoS 0)."
     },
     "onBans": "Nouveaux bans",
-    "onActions": "Actions manuelles (ban, déban, jails)",
+    "onActions": "Actions manuelles (ban, déban, jails) et arrêts du fail2ban embarqué",
     "create": "Créer",
     "created": "Notification {{name}} créée.",
     "destination": "Destination",

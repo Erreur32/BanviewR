@@ -39,7 +39,8 @@ export type HostRow = z.infer<typeof hostRow>;
 // What the startup check found on this machine. 'none' is where the embedded mode will be offered.
 export const localDetection = z.object({
   mode: z.enum(['external', 'none']),
-  reason: z.enum(['socket', 'process', 'service', 'none']),
+  // mount: the host's fail2ban socket folder was replaced since the container started (see detect.ts)
+  reason: z.enum(['socket', 'mount', 'process', 'service', 'none']),
 });
 export type LocalDetection = z.infer<typeof localDetection>;
 
@@ -47,6 +48,14 @@ export type LocalDetection = z.infer<typeof localDetection>;
 // or a host fail2ban found (never both at once)
 export const embeddedBlock = z.enum(['NOT_CONTAINER', 'NOT_ALLOWED', 'HOST_FAIL2BAN']);
 export type EmbeddedBlock = z.infer<typeof embeddedBlock>;
+
+// The host firewall the embedded fail2ban writes to, found on each start: the same iptables backend as
+// Docker's rules, or nftables. dockerUser: bans also go to Docker's DOCKER-USER chain (published ports).
+export const embeddedFirewall = z.object({
+  backend: z.enum(['iptables-nft', 'iptables-legacy', 'nftables']),
+  dockerUser: z.boolean(),
+});
+export type EmbeddedFirewall = z.infer<typeof embeddedFirewall>;
 
 export const embeddedStatus = z.object({
   blockedBy: embeddedBlock.nullable(),
@@ -59,6 +68,8 @@ export const embeddedStatus = z.object({
   stopReason: z.enum(['EXITED', 'HOST_FAIL2BAN']).nullable(),
   lastError: z.string().nullable(),
   confDir: z.string(),
+  // null until the first start
+  firewall: embeddedFirewall.nullable(),
   // The instance row driving it, created on the first start
   hostId: z.number().nullable(),
 });
