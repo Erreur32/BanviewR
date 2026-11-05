@@ -30,7 +30,8 @@ describe('OpenAPI', () => {
     const listUsers = doc.paths['/api/users'].get;
     expect(listUsers['x-access']).toBe('admin');
     expect(listUsers.tags).toEqual(['users']);
-    expect(listUsers.security).toEqual([{ bearerAuth: [] }, { sessionCookie: [] }]);
+    expect(listUsers.security).toEqual([{ sessionCookie: [] }]);
+    expect(doc.paths['/api/audit'].get.security).toEqual([{ bearerAuth: [] }, { sessionCookie: [] }]);
     expect(listUsers.responses['200'].content['application/json'].schema.properties.success).toBeDefined();
 
     expect(doc.paths['/api/tokens'].post.security).toEqual([{ sessionCookie: [] }]);

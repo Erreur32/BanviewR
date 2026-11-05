@@ -8,7 +8,7 @@ import { Badge, Button, Card, ConfirmButton, ErrorText, SelectField, Table, Text
 import { errorText } from '../../errors.ts';
 import { notify } from '../../stores/notificationStore.ts';
 
-const ROLES: Role[] = ['viewer', 'admin'];
+const ROLES: Role[] = ['viewer', 'operator', 'admin'];
 const usersKey = ['users'];
 
 function RoleOptions() {

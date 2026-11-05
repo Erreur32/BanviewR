@@ -35,6 +35,7 @@
   },
   "roles": {
     "admin": "Admin",
+    "operator": "Operator",
     "viewer": "Read only"
   },
   "auth": {
@@ -150,7 +151,7 @@
   },
   "users": {
     "title": "Users",
-    "intro": "Admins drive fail2ban and manage the app, read-only accounts can only look.",
+    "intro": "Admins drive fail2ban and manage the app, operators ban, unban and drive jails, read-only accounts can only look.",
     "role": "Role",
     "createdAt": "Created",
     "lastLogin": "Last sign-in",

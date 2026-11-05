@@ -4,7 +4,8 @@ import { z } from 'zod';
 export const scope = z.enum(['read', 'write', 'admin']);
 export type Scope = z.infer<typeof scope>;
 
-export const role = z.enum(['admin', 'viewer']);
+// operator bans, unbans and drives jails, admin also manages the app
+export const role = z.enum(['admin', 'operator', 'viewer']);
 export type Role = z.infer<typeof role>;
 
 export const username = z

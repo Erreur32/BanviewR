@@ -16,6 +16,10 @@ beforeEach(async () => {
     success: true,
     result: { ok: true },
   }));
+  app.post('/api/hosts/:hostId/poke', { config: { access: 'write' } }, async () => ({
+    success: true,
+    result: { ok: true },
+  }));
 });
 afterEach(() => app.close());
 
@@ -42,7 +46,7 @@ async function setupAdmin() {
   return sessionCookie(await call('POST', '/api/auth/setup', { body: ADMIN }));
 }
 
-async function createUser(admin: string, username: string, role: 'admin' | 'viewer') {
+async function createUser(admin: string, username: string, role: 'admin' | 'operator' | 'viewer') {
   await call('POST', '/api/users', { cookie: admin, body: { username, password: pw('viewer-password-1'), role } });
   return sessionCookie(
     await call('POST', '/api/auth/login', { body: { username, password: pw('viewer-password-1') } }),
@@ -155,6 +159,15 @@ describe('access control', () => {
     const viewer = await createUser(admin, 'viewer', 'viewer');
     expect(result(await call('GET', '/api/hosts/1/ping', { cookie: viewer }))).toEqual({ ok: true });
     expect(result(await call('GET', '/api/users', { cookie: viewer }))).toMatchObject({ code: 'FORBIDDEN' });
+    expect(result(await call('POST', '/api/hosts/1/poke', { cookie: viewer }))).toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  it('lets operators drive fail2ban but not manage the app', async () => {
+    const admin = await setupAdmin();
+    const operator = await createUser(admin, 'operator', 'operator');
+    expect(result(await call('POST', '/api/hosts/1/poke', { cookie: operator }))).toEqual({ ok: true });
+    expect(result(await call('GET', '/api/users', { cookie: operator }))).toMatchObject({ code: 'FORBIDDEN' });
+    expect(result(await call('GET', '/api/tokens', { cookie: operator }))).toMatchObject({ code: 'FORBIDDEN' });
   });
 
   it('refuses unsafe requests from another origin, signed in or not', async () => {
@@ -195,14 +208,22 @@ describe('API tokens', () => {
 
     expect(result(await call('GET', '/api/hosts/1/ping', { token: read }))).toEqual({ ok: true });
     expect(result(await call('GET', '/api/users', { token: read }))).toMatchObject({ code: 'FORBIDDEN' });
-    expect(result(await call('GET', '/api/users', { token: full }))).toMatchObject({ ok: true });
     expect(result(await call('GET', '/api/tokens', { token: full }))).toMatchObject({ code: 'FORBIDDEN' });
+    // A stolen admin token must not create an account that outlives its revocation
+    for (const [method, url] of [
+      ['GET', '/api/users'],
+      ['POST', '/api/users'],
+      ['PATCH', '/api/users/1'],
+      ['DELETE', '/api/users/1'],
+    ] as const) {
+      const body = method === 'POST' ? { username: 'bot', password: pw('bot-password-1'), role: 'admin' } : undefined;
+      expect(result(await call(method, url, { token: full, body }))).toMatchObject({ code: 'FORBIDDEN' });
+    }
     // No Origin check for tokens: they are not sent automatically by browsers
     const res = await app.inject({
       method: 'POST',
-      url: '/api/users',
+      url: '/api/hosts/1/poke',
       headers: { authorization: `Bearer ${full}` },
-      payload: { username: 'bot', password: pw('bot-password-1'), role: 'viewer' },
     });
     expect(result(res)).toMatchObject({ ok: true });
   });
@@ -250,7 +271,7 @@ describe('users', () => {
     const fromThird = await createToken(third, { name: 'b', scopes: ['read'] });
 
     await call('DELETE', '/api/users/2', { cookie: admin });
-    await call('PATCH', '/api/users/3', { cookie: admin, body: { role: 'viewer' } });
+    await call('PATCH', '/api/users/3', { cookie: admin, body: { role: 'operator' } });
     expect(result(await call('GET', '/api/hosts/1/ping', { token: fromSecond }))).toMatchObject({
       code: 'UNAUTHORIZED',
     });

@@ -35,6 +35,7 @@
   },
   "roles": {
     "admin": "Admin",
+    "operator": "Opérateur",
     "viewer": "Lecture seule"
   },
   "auth": {
@@ -150,7 +151,7 @@
   },
   "users": {
     "title": "Utilisateurs",
-    "intro": "Les admins pilotent fail2ban et gèrent l'application, les comptes en lecture seule consultent uniquement.",
+    "intro": "Les admins pilotent fail2ban et gèrent l'application, les opérateurs bannissent, débannissent et pilotent les jails, les comptes en lecture seule consultent uniquement.",
     "role": "Rôle",
     "createdAt": "Créé le",
     "lastLogin": "Dernière connexion",

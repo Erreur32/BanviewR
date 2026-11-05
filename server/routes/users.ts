@@ -11,7 +11,7 @@ import type { Db } from '../db/index.ts';
 import { revokeTokensCreatedBy, usernameIs } from '../db/queries.ts';
 import { users } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
-import { idParams, ok } from '../http.ts';
+import { ADMIN_SESSION, idParams, ok } from '../http.ts';
 
 const oneUser = okResponse({ user: userRow });
 
@@ -43,7 +43,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/users',
     {
-      config: { access: 'admin' },
+      config: ADMIN_SESSION,
       schema: { response: { 200: okResponse({ users: z.array(userRow) }) } },
     },
     async () => ok({ users: db.select().from(users).orderBy(users.username).all().map(toUserRow) }),
@@ -52,7 +52,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/users',
     {
-      config: { access: 'admin' },
+      config: ADMIN_SESSION,
       schema: { body: z.object({ username, password, role }), response: { 200: oneUser } },
     },
     async (req) => {
@@ -70,7 +70,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   app.patch(
     '/users/:id',
     {
-      config: { access: 'admin' },
+      config: ADMIN_SESSION,
       schema: {
         params: idParams,
         body: z.object({ role: role.optional(), password: password.optional() }),
@@ -90,7 +90,8 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       const updated = db.update(users).set(changes).where(eq(users.id, user.id)).returning().get();
       // A new password or role must not keep old sessions alive
       deleteUserSessions(db, user.id);
-      const revoked = newRole === 'viewer' && user.role === 'admin' ? revokeTokensCreatedBy(db, user.id) : 0;
+      // Only admins create tokens: leaving the role takes them away
+      const revoked = newRole && newRole !== 'admin' && user.role === 'admin' ? revokeTokensCreatedBy(db, user.id) : 0;
       audit(req, {
         action: 'user.update',
         ok: true,
@@ -103,7 +104,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     '/users/:id',
-    { config: { access: 'admin' }, schema: { params: idParams, response: { 200: okResponse() } } },
+    { config: ADMIN_SESSION, schema: { params: idParams, response: { 200: okResponse() } } },
     async (req) => {
       const user = getUser(db, req.params.id);
       if (req.principal?.kind === 'user' && req.principal.id === user.id) {
