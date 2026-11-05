@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Locked by default: it only starts inside a container and with `EMBEDDED_ALLOWED=true`.
 - Dashboard with two modes, switched at the top of the page and remembered in the browser. Simple: a few big figures, latest alerts, bans per day over 7 days, health rings, worst addresses, jails, and a one-word summary. Full: six figures with the trend against the 24 hours before, a threat band (addresses by how often they came back), bans per hour stacked by jail, share per jail, bans per day over 14 days, instances, top addresses, countries and network operators, latest bans.
 - Each jail keeps the same color everywhere (sshd and recidive always first), checked for contrast and color blindness.
+- Menu in four groups (Monitor, Act, Configure, Administration). The instance is chosen once in the sidebar and stays the same from page to page.
 
 ### For developers
 

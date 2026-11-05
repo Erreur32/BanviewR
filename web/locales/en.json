@@ -22,7 +22,14 @@
     "geoip": "Geolocation",
     "notifications": "Notifications",
     "firewall": "Firewall",
-    "blocklists": "Blocklists"
+    "blocklists": "Blocklists",
+    "instance": "Instance",
+    "groups": {
+      "watch": "Monitor",
+      "act": "Act",
+      "configure": "Configure",
+      "admin": "Administration"
+    }
   },
   "roles": {
     "admin": "Admin",
@@ -277,7 +284,6 @@
   "jails": {
     "title": "Jails",
     "intro": "Running jails and current bans of the chosen instance.",
-    "instance": "Instance",
     "name": "Jail",
     "banned": "Banned",
     "totalBanned": "Total bans",
