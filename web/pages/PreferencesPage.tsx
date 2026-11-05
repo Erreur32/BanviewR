@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UserInfo } from '../../shared/auth.ts';
-import { api } from '../api.ts';
+import { ApiError, api } from '../api.ts';
 import { authStatusQuery, useCurrentUser } from '../auth.ts';
+import { squarePicture } from '../avatar.ts';
+import { Avatar } from '../components/Avatar.tsx';
 import { Button, Card, ErrorText, SelectField, TextField } from '../components/ui.tsx';
 import { browserTimeZone, formatDateTime } from '../dates.ts';
 import { errorText } from '../errors.ts';
@@ -69,6 +71,75 @@ function DisplayCard() {
       <Button onClick={() => save.mutate()} disabled={save.isPending || timezone === user.timezone}>
         {t('common.save')}
       </Button>
+    </Card>
+  );
+}
+
+// Larger files are refused before decoding them
+const SOURCE_MAX_BYTES = 10 * 1024 * 1024;
+
+function AvatarCard() {
+  const { t } = useTranslation();
+  const user = useCurrentUser();
+  const queryClient = useQueryClient();
+  const [tooBig, setTooBig] = useState(false);
+
+  const onSaved = ({ avatarAt }: { avatarAt: string | null }) => {
+    queryClient.setQueryData(authStatusQuery.queryKey, (old) =>
+      old?.user ? { ...old, user: { ...old.user, avatarAt } } : old,
+    );
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  };
+  const upload = useMutation({
+    // A 256 px square stays far below the server limit, which checks it again
+    mutationFn: async (file: File) =>
+      api.post<{ avatarAt: string | null }>('/auth/avatar', { image: await squarePicture(file) }),
+    onSuccess: onSaved,
+  });
+  const remove = useMutation({
+    mutationFn: () => api.delete<{ avatarAt: string | null }>('/auth/avatar'),
+    onSuccess: onSaved,
+  });
+
+  function pick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    setTooBig(!!file && file.size > SOURCE_MAX_BYTES);
+    if (file && file.size <= SOURCE_MAX_BYTES) upload.mutate(file);
+  }
+
+  const busy = upload.isPending || remove.isPending;
+  const error = upload.error ?? remove.error;
+  return (
+    <Card title={t('prefs.avatarTitle')}>
+      <div className="flex items-center gap-4">
+        <Avatar user={user} size={64} />
+        <div className="space-y-2">
+          <p className="text-sm text-muted">{t('prefs.avatarIntro')}</p>
+          <div className="flex flex-wrap gap-2">
+            <label className="cursor-pointer rounded-md border border-border bg-bg2 px-3 py-1.5 text-sm hover:bg-bg1 has-[:focus-visible]:outline has-[:disabled]:opacity-50">
+              {t('prefs.avatarPick')}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={pick}
+                disabled={busy}
+              />
+            </label>
+            {user.avatarAt && (
+              <Button variant="secondary" onClick={() => remove.mutate()} disabled={busy}>
+                {t('prefs.avatarRemove')}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+      <ErrorText>
+        {tooBig
+          ? t('prefs.avatarTooBig')
+          : error && (error instanceof ApiError ? errorText(t, error) : t('prefs.avatarUnreadable'))}
+      </ErrorText>
     </Card>
   );
 }
@@ -140,6 +211,7 @@ export function PreferencesPage() {
   return (
     <div className="max-w-xl space-y-4">
       <h1 className="text-xl font-semibold">{t('prefs.title')}</h1>
+      <AvatarCard />
       <DisplayCard />
       <PasswordCard />
     </div>

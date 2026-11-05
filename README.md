@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.2.2-111827?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.3.0-111827?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
@@ -52,7 +52,8 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 - Firewall audit: iptables, ipset and nftables rules set by fail2ban
 - Blocklists, notifications (webhook, Discord, Telegram, MQTT), MCP server for AI agents
 - Embedded mode: BanviewR runs its own fail2ban where none is installed, in the host firewall and Docker's `DOCKER-USER`
-- Multi-user auth with three roles (viewer, operator, admin), brute force protection, API tokens, audit log, English and French UI
+- Multi-user auth with three roles (viewer, operator, admin), profile pictures (initials by default), brute force protection, API tokens, audit log, English and French UI
+- Sidebar menu with foldable groups and a compact icon rail, remembered per browser
 
 ## Roadmap
 

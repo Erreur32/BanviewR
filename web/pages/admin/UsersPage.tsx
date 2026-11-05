@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Role, UserRow } from '../../../shared/auth.ts';
 import { api } from '../../api.ts';
 import { useCurrentUser, useFormatDateTime } from '../../auth.ts';
+import { Avatar } from '../../components/Avatar.tsx';
 import { Badge, Button, Card, ConfirmButton, ErrorText, SelectField, Table, TextField } from '../../components/ui.tsx';
 import { errorText } from '../../errors.ts';
 import { notify } from '../../stores/notificationStore.ts';
@@ -135,6 +136,14 @@ function UserRowView({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
     },
     onError,
   });
+  const dropAvatar = useMutation({
+    mutationFn: () => api.delete(`/users/${user.id}/avatar`),
+    onSuccess: () => {
+      refresh();
+      notify('success', t('users.avatarRemoved', { username: user.username }));
+    },
+    onError,
+  });
   const remove = useMutation({
     mutationFn: () => api.delete(`/users/${user.id}`),
     onSuccess: () => {
@@ -148,7 +157,10 @@ function UserRowView({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
     <>
       <tr>
         <td className="font-medium">
-          {user.username} {isSelf && <Badge tone="accent">{t('users.you')}</Badge>}
+          <span className="inline-flex items-center gap-2">
+            <Avatar user={user} size={24} />
+            {user.username} {isSelf && <Badge tone="accent">{t('users.you')}</Badge>}
+          </span>
         </td>
         <td>
           {isSelf ? (
@@ -173,6 +185,16 @@ function UserRowView({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
               <Button size="sm" variant="secondary" onClick={() => setResetting(!resetting)}>
                 {t('users.resetPassword')}
               </Button>
+              {user.avatarAt && (
+                <ConfirmButton
+                  size="sm"
+                  confirmLabel={t('common.confirm')}
+                  onConfirm={() => dropAvatar.mutate()}
+                  disabled={dropAvatar.isPending}
+                >
+                  {t('users.removeAvatar')}
+                </ConfirmButton>
+              )}
               <ConfirmButton
                 size="sm"
                 confirmLabel={t('common.confirm')}

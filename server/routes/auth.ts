@@ -8,6 +8,7 @@ import { clearSessionCookie, setSessionCookie } from '../auth/access.ts';
 import { type AttemptKey, clearFailures, lockedUntil, MAX_FAILURES, recordFailure } from '../auth/bruteForce.ts';
 import { hashPassword, verifyPassword } from '../auth/password.ts';
 import { createSession, deleteSession, deleteUserSessions, purgeExpiredSessions } from '../auth/sessions.ts';
+import { toIso } from '../dates.ts';
 import { usernameIs } from '../db/queries.ts';
 import { users } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
@@ -23,6 +24,7 @@ const toUserInfo = (u: typeof users.$inferSelect) => ({
   username: u.username,
   role: u.role,
   timezone: u.timezone,
+  avatarAt: toIso(u.avatarAt),
 });
 
 export const authRoutes: FastifyPluginAsyncZod = async (app) => {
