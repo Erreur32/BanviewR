@@ -44,7 +44,14 @@ describe('embedded routes', () => {
     expect((await asAdmin('GET', '/api/embedded')).embedded).toMatchObject({ running: false, blockedBy: null });
 
     const started = await asAdmin('POST', '/api/embedded/start');
-    expect(started.embedded).toMatchObject({ running: true, enabled: true });
+    // A trial: not enabled for the next boot until confirmed
+    expect(started.embedded).toMatchObject({ running: true, enabled: false });
+    expect(started.embedded.trialUntil).not.toBeNull();
+    expect(started.callerIp).toBe('127.0.0.1');
+    expect((await asAdmin('POST', '/api/embedded/confirm')).embedded).toMatchObject({
+      enabled: true,
+      trialUntil: null,
+    });
     const row = app.db
       .select()
       .from(hosts)
@@ -67,6 +74,7 @@ describe('embedded routes', () => {
       .filter((a) => a.action.startsWith('embedded.'));
     expect(actions.map((a) => [a.action, a.ok])).toEqual([
       ['embedded.start', true],
+      ['embedded.confirm', true],
       ['embedded.start', true],
       ['embedded.stop', true],
     ]);

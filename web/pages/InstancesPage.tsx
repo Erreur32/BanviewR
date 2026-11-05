@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { HealthResult } from '../../shared/api.ts';
 import type { EmbeddedStatus, HostRow } from '../../shared/hosts.ts';
 import { api } from '../api.ts';
-import { useCurrentUser } from '../auth.ts';
-import { Badge, Button, Card, ConfirmButton, ErrorText, Table, TextField } from '../components/ui.tsx';
+import { useCurrentUser, useFormatDateTime } from '../auth.ts';
+import { Badge, Button, Card, CheckboxField, ConfirmButton, ErrorText, Table, TextField } from '../components/ui.tsx';
 import { conflictText, errorText } from '../errors.ts';
 import { hostsQuery } from '../hosts.ts';
 import { notify } from '../stores/notificationStore.ts';
@@ -26,16 +26,88 @@ function DetectionCard() {
 }
 
 // Admins only: the routes refuse everyone else
+type EmbeddedResult = { embedded: EmbeddedStatus; callerIp: string };
+
+// Where the bans land, what is never banned, the trial and the way back: read before the firewall changes
+function EmbeddedStartDialog({
+  open,
+  status,
+  callerIp,
+  onStart,
+  onClose,
+}: {
+  open: boolean;
+  status: EmbeddedStatus;
+  callerIp: string;
+  onStart: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [understood, setUnderstood] = useState(false);
+
+  useEffect(() => {
+    const el = dialog.current;
+    if (open && !el?.open) {
+      setUnderstood(false);
+      el?.showModal();
+    }
+    if (!open && el?.open) el.close();
+  }, [open]);
+
+  const k = 'instances.embedded.warn';
+  return (
+    <dialog
+      ref={dialog}
+      onClose={onClose}
+      className="m-auto w-full max-w-lg rounded-lg border border-border bg-bg1 p-6 text-text backdrop:bg-black/60"
+    >
+      <h2 className="mb-3 text-base font-semibold">{t(`${k}.title`)}</h2>
+      <ul className="mb-4 list-disc space-y-2 pl-5 text-sm">
+        <li>{t(`${k}.machine.${status.machine.kind}`, { name: status.machine.name ?? '?' })}</li>
+        {!status.hostNetwork && <li className="text-danger">{t(`${k}.noHostNetwork`)}</li>}
+        <li>{t(`${k}.ignored`, { ip: callerIp })}</li>
+        <li>{t(`${k}.trial`)}</li>
+        <li>
+          {t(`${k}.rescue`)} <code className="font-mono text-xs">docker stop banviewr</code>
+        </li>
+      </ul>
+      {open && (
+        <CheckboxField
+          label={t(`${k}.understood`)}
+          checked={understood}
+          onChange={(e) => setUnderstood(e.target.checked)}
+        />
+      )}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="secondary" size="sm" onClick={onClose}>
+          {t('common.cancel')}
+        </Button>
+        <Button size="sm" disabled={!understood} onClick={onStart}>
+          {t(`${k}.start`)}
+        </Button>
+      </div>
+    </dialog>
+  );
+}
+
 function EmbeddedCard() {
   const { t } = useTranslation();
+  const formatDateTime = useFormatDateTime();
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: ['embedded'], queryFn: () => api.get<{ embedded: EmbeddedStatus }>('/embedded') });
+  const [asking, setAsking] = useState(false);
+  const query = useQuery({
+    queryKey: ['embedded'],
+    queryFn: () => api.get<EmbeddedResult>('/embedded'),
+    // A trial stops on its own: show it when it does
+    refetchInterval: (q) => (q.state.data?.embedded.trialUntil ? 10_000 : false),
+  });
   const change = useMutation({
-    mutationFn: (action: 'start' | 'stop') => api.post<{ embedded: EmbeddedStatus }>(`/embedded/${action}`),
+    mutationFn: (action: 'start' | 'stop' | 'confirm') => api.post<EmbeddedResult>(`/embedded/${action}`),
     onSuccess: (data, action) => {
       queryClient.setQueryData(['embedded'], data);
       queryClient.invalidateQueries({ queryKey: hostsQuery.queryKey });
-      notify('success', t(action === 'start' ? 'instances.embedded.startDone' : 'instances.embedded.stopDone'));
+      notify('success', t(`instances.embedded.${action}Done`));
     },
     onError: (err: Error) => {
       queryClient.invalidateQueries({ queryKey: ['embedded'] });
@@ -47,7 +119,7 @@ function EmbeddedCard() {
   return (
     <Card title={t('instances.embedded.title')}>
       <ErrorText>{query.error && errorText(t, query.error)}</ErrorText>
-      {embedded && (
+      {embedded && query.data && (
         <div className="space-y-2 text-sm">
           <p>
             {embedded.running ? (
@@ -57,6 +129,23 @@ function EmbeddedCard() {
             )}{' '}
             {embedded.blockedBy && t(`instances.embedded.blocked.${embedded.blockedBy}`)}
           </p>
+          {embedded.trialUntil && (
+            <div className="rounded-md border border-[#d29922] bg-[#bb800926] p-3">
+              <p className="mb-2">
+                {t('instances.embedded.trialRunning', { time: formatDateTime(embedded.trialUntil) })}
+              </p>
+              <Button size="sm" onClick={() => change.mutate('confirm')} disabled={change.isPending}>
+                {t('instances.embedded.confirm')}
+              </Button>
+            </div>
+          )}
+          <p className="text-muted">
+            {t(`instances.embedded.warn.machine.${embedded.machine.kind}`, { name: embedded.machine.name ?? '?' })}
+          </p>
+          {!embedded.hostNetwork && <p className="text-danger">{t('instances.embedded.warn.noHostNetwork')}</p>}
+          {embedded.trustedIp && (
+            <p className="text-muted">{t('instances.embedded.trustedIp', { ip: embedded.trustedIp })}</p>
+          )}
           {embedded.firewall && (
             <p className="text-muted">
               {t('instances.embedded.firewall', { backend: embedded.firewall.backend })}{' '}
@@ -82,14 +171,20 @@ function EmbeddedCard() {
               {t('instances.embedded.stop')}
             </ConfirmButton>
           ) : (
-            <Button
-              size="sm"
-              onClick={() => change.mutate('start')}
-              disabled={change.isPending || !!embedded.blockedBy}
-            >
+            <Button size="sm" onClick={() => setAsking(true)} disabled={change.isPending || !!embedded.blockedBy}>
               {t('instances.embedded.start')}
             </Button>
           )}
+          <EmbeddedStartDialog
+            open={asking}
+            status={embedded}
+            callerIp={query.data.callerIp}
+            onClose={() => setAsking(false)}
+            onStart={() => {
+              setAsking(false);
+              change.mutate('start');
+            }}
+          />
         </div>
       )}
     </Card>

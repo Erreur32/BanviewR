@@ -1,5 +1,7 @@
 import { eq, or } from 'drizzle-orm';
+import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { okResponse } from '../../shared/api.ts';
 import { embeddedStatus } from '../../shared/hosts.ts';
 import { audited } from '../audit.ts';
@@ -8,7 +10,9 @@ import { ADMIN_SESSION, CLIENT_RATE_LIMIT, ok } from '../http.ts';
 
 // Starting fail2ban changes the firewall: a signed-in admin only, never a token
 const CHANGE = { ...ADMIN_SESSION, rateLimit: { max: 10, timeWindow: '1 minute' } };
-const response = { 200: okResponse({ embedded: embeddedStatus }) };
+// callerIp: the address BanviewR sees for this admin, shown before a start (a proxy without TRUST_PROXY
+// hides the real one, and then it cannot be protected)
+const response = { 200: okResponse({ embedded: embeddedStatus, callerIp: z.string() }) };
 
 // One embedded fail2ban per BanviewR, so these routes have no :hostId. Its instance row is created
 // on the first start and then reached like any other through /api/hosts/:hostId.
@@ -34,15 +38,19 @@ export const embeddedRoutes: FastifyPluginAsyncZod = async (app) => {
         .run();
   }
 
-  const status = () => ({ ...embedded.status(), hostId: embeddedHost()?.id ?? null });
+  const status = (req: FastifyRequest) =>
+    ok({ embedded: { ...embedded.status(), hostId: embeddedHost()?.id ?? null }, callerIp: req.ip });
 
-  app.get('/embedded', { config: { ...ADMIN_SESSION, rateLimit: CLIENT_RATE_LIMIT }, schema: { response } }, async () =>
-    ok({ embedded: status() }),
+  app.get(
+    '/embedded',
+    { config: { ...ADMIN_SESSION, rateLimit: CLIENT_RATE_LIMIT }, schema: { response } },
+    async (req) => status(req),
   );
 
-  app.post('/embedded/start', { config: CHANGE, schema: { response } }, async (req) => {
+  // Always a trial from here: it stops on its own unless confirmed, and the password was typed recently
+  app.post('/embedded/start', { config: { ...CHANGE, recentAuth: true }, schema: { response } }, async (req) => {
     await audited(db, req, { action: 'embedded.start', hostId: embeddedHost()?.id, target: 'embedded' }, async () => {
-      await embedded.start();
+      await embedded.start({ trial: true, trustedIp: req.ip });
       try {
         ensureHost();
       } catch (err) {
@@ -51,13 +59,20 @@ export const embeddedRoutes: FastifyPluginAsyncZod = async (app) => {
         throw err;
       }
     });
-    return ok({ embedded: status() });
+    return status(req);
+  });
+
+  app.post('/embedded/confirm', { config: CHANGE, schema: { response } }, async (req) => {
+    await audited(db, req, { action: 'embedded.confirm', hostId: embeddedHost()?.id, target: 'embedded' }, () =>
+      embedded.confirm(),
+    );
+    return status(req);
   });
 
   app.post('/embedded/stop', { config: CHANGE, schema: { response } }, async (req) => {
     await audited(db, req, { action: 'embedded.stop', hostId: embeddedHost()?.id, target: 'embedded' }, () =>
       embedded.stop(),
     );
-    return ok({ embedded: status() });
+    return status(req);
   });
 };

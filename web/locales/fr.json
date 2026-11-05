@@ -309,7 +309,26 @@
       },
       "stopReason": {
         "EXITED": "fail2ban-server s'est arrêté de lui-même.",
-        "HOST_FAIL2BAN": "Arrêté car un fail2ban est apparu sur la machine : jamais les deux à la fois."
+        "HOST_FAIL2BAN": "Arrêté car un fail2ban est apparu sur la machine : jamais les deux à la fois.",
+        "TRIAL_EXPIRED": "Arrêté car l'essai n'a pas été confirmé dans les 10 minutes."
+      },
+      "confirmDone": "fail2ban embarqué confirmé : il reviendra avec le conteneur.",
+      "confirm": "Confirmer, garder fail2ban embarqué",
+      "trialRunning": "Essai en cours : sans confirmation, fail2ban embarqué s'arrête seul à {{time}} et retire ses règles. Vous lisez cette page, l'accès marche : confirmez.",
+      "trustedIp": "Jamais bannie : {{ip}}, l'adresse publique de l'admin qui l'a démarré.",
+      "warn": {
+        "title": "Avant de démarrer fail2ban embarqué",
+        "machine": {
+          "vm": "Machine virtuelle ({{name}}) : seul le pare-feu de cette VM change, la console de l'hyperviseur reste un secours.",
+          "physical": "Machine physique ({{name}}) : son pare-feu change ; si elle est distante, un blocage se répare sur place ou par sa console de secours.",
+          "unknown": "Type de machine inconnu ({{name}}) : son pare-feu change ; prévoyez un accès de secours hors réseau."
+        },
+        "noHostNetwork": "Le conteneur n'est pas en network_mode: host : les bans ne s'appliqueront qu'au conteneur et ne protégeront pas la machine.",
+        "ignored": "Jamais bannis : loopback, plages privées, Tailscale (100.64.0.0/10), réseaux Docker, et votre adresse vue par BanviewR, {{ip}}. Si ce n'est pas votre vraie adresse (proxy sans TRUST_PROXY), elle n'est pas protégée.",
+        "trial": "Essai de 10 minutes : confirmez depuis cette page, sinon fail2ban embarqué s'arrête seul et retire ses règles. Un redémarrage du conteneur pendant l'essai le laisse éteint.",
+        "rescue": "En cas de blocage, depuis la machine : fail2ban retire ses règles en s'arrêtant avec",
+        "understood": "J'ai compris, je garde un accès de secours",
+        "start": "Démarrer l'essai"
       }
     }
   },

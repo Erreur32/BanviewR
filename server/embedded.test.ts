@@ -12,16 +12,18 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LocalDetection } from '../shared/hosts.ts';
 import {
   BASE_IGNOREIP,
   createEmbedded,
+  describeMachine,
   dockerNetworks,
   type EmbeddedOptions,
   embeddedBlock,
   embeddedPaths,
   keepIgnoreip,
+  onHostNetwork,
   parseIgnoreList,
   pickFirewall,
   writeBaseConfig,
@@ -214,8 +216,41 @@ describe('ignoreip of jails', () => {
   });
 });
 
+describe('describeMachine', () => {
+  const x86 = (flags: string) => `processor\t: 0\nflags\t\t: fpu vme ${flags} sse\n`;
+  it('tells a VM by the hypervisor flag or a known DMI name, else bare metal', () => {
+    expect(describeMachine({ cpuinfo: x86('hypervisor'), vendor: 'QEMU\n', product: 'Standard PC\n' })).toEqual({
+      kind: 'vm',
+      name: 'QEMU Standard PC',
+    });
+    expect(describeMachine({ cpuinfo: x86(''), vendor: 'innotek GmbH', product: 'VirtualBox' }).kind).toBe('vm');
+    expect(describeMachine({ cpuinfo: x86(''), vendor: 'Micro-Star', product: 'MS-01' })).toEqual({
+      kind: 'physical',
+      name: 'Micro-Star MS-01',
+    });
+  });
+
+  it('stays unknown without CPU flags (arm64) nor a VM name', () => {
+    expect(describeMachine({ cpuinfo: 'Features\t: fp asimd\n', vendor: null, product: null })).toEqual({
+      kind: 'unknown',
+      name: null,
+    });
+    expect(describeMachine({ cpuinfo: null, vendor: null, product: 'KVM' }).kind).toBe('vm');
+  });
+});
+
+describe('onHostNetwork', () => {
+  it('sees docker0 only from the host network namespace', () => {
+    mkdirSync(join(dir, 'net', 'eth0'), { recursive: true });
+    expect(onHostNetwork(join(dir, 'net'))).toBe(false);
+    mkdirSync(join(dir, 'net', 'docker0'));
+    expect(onHostNetwork(join(dir, 'net'))).toBe(true);
+  });
+});
+
 describe('embedded supervisor', () => {
   let enabled: boolean;
+  let trusted: string | null;
   let detections: number[][];
 
   function supervisor(over: Partial<EmbeddedOptions> = {}, hostFound = () => false) {
@@ -239,6 +274,10 @@ describe('embedded supervisor', () => {
         setEnabled: (on) => {
           enabled = on;
         },
+        trustedIp: () => trusted,
+        setTrustedIp: (ip) => {
+          trusted = ip;
+        },
       },
       log: quiet,
       ...over,
@@ -248,6 +287,7 @@ describe('embedded supervisor', () => {
   let stops: LocalDetection[];
   beforeEach(() => {
     enabled = false;
+    trusted = null;
     stops = [];
   });
 
@@ -332,5 +372,43 @@ describe('embedded supervisor', () => {
     const embedded = supervisor({}, () => true);
     await embedded.resume();
     expect(embedded.status()).toMatchObject({ running: false, enabled: false, stopReason: 'HOST_FAIL2BAN' });
+  });
+
+  it('on trial, stays off for the next boot until confirmed', async () => {
+    const embedded = supervisor();
+    await embedded.start({ trial: true });
+    expect(embedded.status()).toMatchObject({ running: true, enabled: false });
+    expect(embedded.status().trialUntil).not.toBeNull();
+    await embedded.confirm();
+    expect(embedded.status()).toMatchObject({ running: true, enabled: true, trialUntil: null });
+    // Nothing left to confirm
+    await expect(embedded.confirm()).rejects.toMatchObject({ code: 'CONFLICT' });
+    await embedded.stop();
+  });
+
+  it('stops on its own when the trial is not confirmed in time', async () => {
+    let ended = 0;
+    const embedded = supervisor({ trialMs: 200, onTrialEnd: () => ended++ });
+    await embedded.start({ trial: true });
+    await vi.waitFor(() => expect(embedded.status().running).toBe(false), { timeout: 3000 });
+    expect(embedded.status()).toMatchObject({ enabled: false, stopReason: 'TRIAL_EXPIRED', trialUntil: null });
+    expect(ended).toBe(1);
+  });
+
+  it('keeps the public address of the admin out of every jail, not a private one', async () => {
+    const embedded = supervisor();
+    const ignoreip = () =>
+      readFileSync(join(embedded.paths.confDir, 'jail.d', '00-banviewr.local'), 'utf8').match(
+        /^ignoreip = (.*)$/m,
+      )?.[1];
+    await embedded.start({ trustedIp: '::ffff:203.0.113.9' });
+    expect(embedded.status().trustedIp).toBe('203.0.113.9');
+    expect(ignoreip()?.split(' ')).toContain('203.0.113.9');
+    await embedded.stop();
+    // A start from the LAN keeps the public address
+    await embedded.start({ trustedIp: '192.168.32.5' });
+    expect(embedded.status().trustedIp).toBe('203.0.113.9');
+    expect(ignoreip()).not.toContain('192.168.32.5 ');
+    await embedded.stop();
   });
 });

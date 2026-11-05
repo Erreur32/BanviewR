@@ -1,5 +1,15 @@
 import { type ChildProcess, execFile, spawn } from 'node:child_process';
-import { lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -8,12 +18,19 @@ import { promisify } from 'node:util';
 import { eq } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import { jailName } from '../shared/fail2ban.ts';
-import type { EmbeddedBlock, EmbeddedFirewall, EmbeddedStatus, LocalDetection } from '../shared/hosts.ts';
+import type {
+  EmbeddedBlock,
+  EmbeddedFirewall,
+  EmbeddedMachine,
+  EmbeddedStatus,
+  LocalDetection,
+} from '../shared/hosts.ts';
 import { socketListens } from './connectors/detect.ts';
 import { dump, parseJailList } from './connectors/local.ts';
 import type { Db } from './db/index.ts';
 import { settings } from './db/schema.ts';
 import { AppError } from './errors.ts';
+import { covers } from './jailOps.ts';
 
 // Never banned, whatever the jails say: loopback, private and link-local ranges, CGNAT (Tailscale).
 // Banning one of them could lock the admin out of the machine.
@@ -63,6 +80,55 @@ export function dockerNetworks(ifaces = networkInterfaces()) {
   }
   return [...nets];
 }
+
+const VM_NAMES = /qemu|kvm|vmware|virtualbox|innotek|xen|bochs|hyper-v|virtual machine|parallels|bhyve/i;
+
+// VM or bare metal, from the CPU flags (x86) and the DMI names. Without a flags line (arm64) and no known
+// VM name it stays unknown: a remote bare-metal machine is the case where a lockout is hardest to undo.
+export function describeMachine({
+  cpuinfo,
+  vendor,
+  product,
+}: {
+  cpuinfo: string | null;
+  vendor: string | null;
+  product: string | null;
+}): EmbeddedMachine {
+  const name =
+    [vendor, product]
+      .map((v) => v?.trim())
+      .filter(Boolean)
+      .join(' ') || null;
+  const flags = cpuinfo
+    ?.split('\n')
+    .filter((line) => line.startsWith('flags'))
+    .flatMap((line) => line.split(/\s+/));
+  if (flags?.includes('hypervisor') || (name && VM_NAMES.test(name))) return { kind: 'vm', name };
+  return { kind: flags?.length ? 'physical' : 'unknown', name };
+}
+
+const readOrNull = (file: string) => {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+};
+
+export const readMachine = () =>
+  describeMachine({
+    cpuinfo: readOrNull('/proc/cpuinfo'),
+    vendor: readOrNull('/sys/class/dmi/id/sys_vendor'),
+    product: readOrNull('/sys/class/dmi/id/product_name'),
+  });
+
+// docker0 only shows in the host's network namespace, read from sysfs: networkInterfaces() leaves out an
+// interface without an address (a docker0 with no container on it). shortcut: a Docker without its
+// default bridge reads as "not host network", compare namespaces if that comes up
+export const onHostNetwork = (netDir = '/sys/class/net') => existsSync(join(netDir, 'docker0'));
+
+// An IPv4 client reached over a dual-stack socket shows as ::ffff:a.b.c.d, fail2ban wants a.b.c.d
+const plainIp = (ip: string) => (ip.toLowerCase().startsWith('::ffff:') && ip.includes('.') ? ip.slice(7) : ip);
 
 export function embeddedPaths(dataDir: string) {
   const root = join(resolve(dataDir), 'fail2ban');
@@ -260,19 +326,37 @@ export async function keepIgnoreip(client: Client, ignoreip: string[]) {
   return added;
 }
 
-type Store = { enabled(): boolean; setEnabled(on: boolean): void };
+type Store = {
+  enabled(): boolean;
+  setEnabled(on: boolean): void;
+  trustedIp(): string | null;
+  setTrustedIp(ip: string): void;
+};
 
 const ENABLED_KEY = 'embedded.enabled';
+const TRUSTED_KEY = 'embedded.trustedIp';
 
-export const settingsStore = (db: Db): Store => ({
-  enabled: () => db.select().from(settings).where(eq(settings.key, ENABLED_KEY)).get()?.value === true,
-  setEnabled: (on) =>
-    void db
-      .insert(settings)
-      .values({ key: ENABLED_KEY, value: on })
-      .onConflictDoUpdate({ target: settings.key, set: { value: on } })
-      .run(),
-});
+export function settingsStore(db: Db): Store {
+  const get = (key: string) => db.select().from(settings).where(eq(settings.key, key)).get()?.value;
+  const put = (key: string, value: unknown) =>
+    void db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } }).run();
+  return {
+    enabled: () => get(ENABLED_KEY) === true,
+    setEnabled: (on) => put(ENABLED_KEY, on),
+    trustedIp: () => {
+      const ip = get(TRUSTED_KEY);
+      return typeof ip === 'string' ? ip : null;
+    },
+    setTrustedIp: (ip) => put(TRUSTED_KEY, ip),
+  };
+}
+
+// Started from the UI, the embedded fail2ban stops on its own unless confirmed from the UI within this time:
+// a start that cut the admin off undoes itself
+export const TRIAL_MS = 10 * 60_000;
+
+// trustedIp: the address of the admin who starts it, kept out of every jail when it is not private already
+export type StartOptions = { trial?: boolean; trustedIp?: string };
 
 export type EmbeddedOptions = {
   dataDir: string;
@@ -284,6 +368,9 @@ export type EmbeddedOptions = {
   firewall?: () => Promise<EmbeddedFirewall>;
   // Told when a host fail2ban turns the embedded one off
   onHostStop?: (detection: LocalDetection) => void;
+  // Told when a trial start was not confirmed in time and the server was stopped
+  onTrialEnd?: () => void;
+  trialMs?: number;
   serverBin?: string;
   clientBin?: string;
   // Stands in for clientBin in tests
@@ -301,7 +388,14 @@ type Run = { proc: ChildProcess; startedAt: Date; ended: Promise<string>; stoppi
 export function createEmbedded(
   opts: EmbeddedOptions & { detection: LocalDetection; store: Store; log: Pick<FastifyBaseLogger, 'info' | 'warn'> },
 ) {
-  const { store, log, serverBin = 'fail2ban-server', stockDir = '/etc/fail2ban', readyTimeoutMs = 20_000 } = opts;
+  const {
+    store,
+    log,
+    serverBin = 'fail2ban-server',
+    stockDir = '/etc/fail2ban',
+    readyTimeoutMs = 20_000,
+    trialMs = TRIAL_MS,
+  } = opts;
   const paths = embeddedPaths(opts.dataDir);
   let detection = opts.detection;
   let current: Run | null = null;
@@ -309,6 +403,11 @@ export function createEmbedded(
   let lastError: string | null = null;
   let firewall: EmbeddedFirewall | null = null;
   let ignoreip: string[] = [];
+  let trial: { until: Date; timer: NodeJS.Timeout } | null = null;
+  const endTrial = () => {
+    if (trial) clearTimeout(trial.timer);
+    trial = null;
+  };
   const client: Client =
     opts.client ??
     ((args) =>
@@ -337,18 +436,22 @@ export function createEmbedded(
     clearTimeout(force);
   }
 
-  async function launch() {
+  async function launch({ trial: onTrial = false, trustedIp }: StartOptions = {}) {
     if (current) return;
     detection = await opts.detect([]);
     const block = blockedBy();
     if (block) {
       throw new AppError(block === 'HOST_FAIL2BAN' ? 'CONFLICT' : 'FORBIDDEN', `Embedded fail2ban blocked: ${block}`);
     }
+    // A start from the LAN keeps the public address an earlier admin was protected with
+    const ip = trustedIp && plainIp(trustedIp);
+    if (ip && !BASE_IGNOREIP.some((range) => covers(range, ip))) store.setTrustedIp(ip);
     if (Buffer.byteLength(paths.socketPath) > MAX_SOCKET_PATH) {
       throw new AppError('BAD_REQUEST', 'DATA_DIR is too long for the embedded fail2ban socket path');
     }
     firewall = opts.firewall ? await opts.firewall() : null;
-    ignoreip = [...BASE_IGNOREIP, ...dockerNetworks()];
+    const trusted = store.trustedIp();
+    ignoreip = [...BASE_IGNOREIP, ...dockerNetworks(), ...(trusted ? [trusted] : [])];
     writeBaseConfig(paths, { stockDir, ignoreip, firewall });
     stopReason = null;
     lastError = null;
@@ -389,8 +492,22 @@ export function createEmbedded(
       }
       await sleep(250);
     }
-    store.setEnabled(true);
-    log.info({ pid: proc.pid, confDir: paths.confDir, firewall }, 'Embedded fail2ban started');
+    // On trial it is not enabled yet: a container restart before the confirmation leaves it off
+    if (onTrial) {
+      const timer = setTimeout(() => {
+        void serial(async () => {
+          if (current !== run || !trial) return;
+          trial = null;
+          await halt();
+          stopReason = 'TRIAL_EXPIRED';
+          log.warn('Embedded fail2ban trial not confirmed, stopped');
+          opts.onTrialEnd?.();
+        });
+      }, trialMs);
+      timer.unref();
+      trial = { until: new Date(Date.now() + trialMs), timer };
+    } else store.setEnabled(true);
+    log.info({ pid: proc.pid, confDir: paths.confDir, firewall, trial: onTrial }, 'Embedded fail2ban started');
     await enforceIgnoreip();
   }
 
@@ -406,13 +523,22 @@ export function createEmbedded(
     }
   }
 
-  const start = () => serial(launch);
+  const start = (options?: StartOptions) => serial(() => launch(options));
 
   // keepEnabled: shutting down with the container, it must come back on the next start
   const stop = (keepEnabled = false) =>
     serial(async () => {
+      endTrial();
       await halt();
       if (!keepEnabled) store.setEnabled(false);
+    });
+
+  // The admin still reaches BanviewR after a trial start: keep it, and bring it back with the container
+  const confirm = () =>
+    serial(async () => {
+      if (!current || !trial) throw new AppError('CONFLICT', 'No embedded fail2ban trial to confirm');
+      endTrial();
+      store.setEnabled(true);
     });
 
   // Never both at once: a host fail2ban that shows up wins, the embedded one stops and stays off
@@ -433,6 +559,7 @@ export function createEmbedded(
     paths,
     start,
     stop,
+    confirm,
     check,
     enforceIgnoreip,
     // Boot: start again what the UI started before
@@ -462,6 +589,10 @@ export function createEmbedded(
       lastError,
       confDir: paths.confDir,
       firewall,
+      trialUntil: trial?.until.toISOString() ?? null,
+      trustedIp: store.trustedIp(),
+      machine: readMachine(),
+      hostNetwork: onHostNetwork(),
     }),
   };
 }

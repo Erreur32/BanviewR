@@ -309,7 +309,26 @@
       },
       "stopReason": {
         "EXITED": "fail2ban-server stopped on its own.",
-        "HOST_FAIL2BAN": "Stopped because a fail2ban appeared on the machine: never both at once."
+        "HOST_FAIL2BAN": "Stopped because a fail2ban appeared on the machine: never both at once.",
+        "TRIAL_EXPIRED": "Stopped because the trial was not confirmed within 10 minutes."
+      },
+      "confirmDone": "Embedded fail2ban confirmed: it will come back with the container.",
+      "confirm": "Confirm, keep the embedded fail2ban",
+      "trialRunning": "Trial running: without a confirmation, the embedded fail2ban stops on its own at {{time}} and removes its rules. You are reading this page, so access works: confirm.",
+      "trustedIp": "Never banned: {{ip}}, the public address of the admin who started it.",
+      "warn": {
+        "title": "Before starting the embedded fail2ban",
+        "machine": {
+          "vm": "Virtual machine ({{name}}): only the firewall of this VM changes, the hypervisor console stays a way back.",
+          "physical": "Physical machine ({{name}}): its firewall changes; if it is remote, a lockout is fixed on site or through its rescue console.",
+          "unknown": "Unknown machine type ({{name}}): its firewall changes; keep a way in that does not go through the network."
+        },
+        "noHostNetwork": "The container does not use network_mode: host: bans will only apply to the container and will not protect the machine.",
+        "ignored": "Never banned: loopback, private ranges, Tailscale (100.64.0.0/10), Docker networks, and your address as BanviewR sees it, {{ip}}. If that is not your real address (a proxy without TRUST_PROXY), it is not protected.",
+        "trial": "10 minute trial: confirm from this page, or the embedded fail2ban stops on its own and removes its rules. A container restart during the trial leaves it off.",
+        "rescue": "If you get locked out, from the machine: fail2ban removes its rules when stopped with",
+        "understood": "I understand, I keep a way back in",
+        "start": "Start the trial"
       }
     }
   },
