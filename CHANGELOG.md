@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-05
+
+### Security
+
+- `@fastify/static` 10.1.10, which brings `glob` 14.0.3 and `minimatch` 11.0.4: fixes the `glob` AbortSignal cancellation bypass (Dependabot alert 1) and the `minimatch` pattern denial of service. `npm audit` now reports no vulnerability.
+
 ## [0.1.0] - 2026-11-02
 
 ### For users
