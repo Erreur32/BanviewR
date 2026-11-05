@@ -155,11 +155,20 @@
     "avatarPick": "Choose a picture",
     "avatarRemove": "Remove the picture",
     "avatarTooBig": "Picture too large (10 MB at most).",
-    "avatarUnreadable": "Unreadable picture, try another file."
+    "avatarUnreadable": "Unreadable picture, try another file.",
+    "mustChangeTitle": "New password",
+    "mustChangeIntro": "An admin chose your current password. Choose your own to go on.",
+    "sessionsTitle": "Open sessions",
+    "sessionsIntro": "The browsers signed in to your account. Sign out the ones you do not recognise.",
+    "sessionDevice": "Device",
+    "sessionSince": "Opened",
+    "sessionCurrent": "this session",
+    "sessionRevoke": "Sign out",
+    "sessionRevokeOthers": "Sign out the other sessions"
   },
   "users": {
     "title": "Users",
-    "intro": "Admins drive fail2ban and manage the app, operators ban, unban and drive jails, read-only accounts can only look.",
+    "intro": "Admins drive fail2ban and manage the app, operators ban, unban and drive jails, read-only accounts can only look. A password chosen by an admin (new account, reset) must be changed at the first sign-in.",
     "role": "Role",
     "createdAt": "Created",
     "lastLogin": "Last sign-in",
@@ -172,10 +181,16 @@
     "deleted": "User {{username}} deleted.",
     "resetPassword": "New password",
     "newPasswordFor": "New password for {{username}}",
-    "passwordResetHint": "At least 10 characters. Their open sessions will be signed out.",
+    "passwordResetHint": "At least 10 characters. Their open sessions will be signed out and they will choose their own password at the next sign-in.",
     "passwordReset": "Password of {{username}} changed.",
     "removeAvatar": "Remove picture",
-    "avatarRemoved": "Picture of {{username}} removed."
+    "avatarRemoved": "Picture of {{username}} removed.",
+    "disabled": "disabled",
+    "mustChange": "password to change",
+    "enable": "Enable",
+    "disable": "Disable",
+    "disabledDone": "{{username}} is disabled: their sessions and tokens are cut off.",
+    "enabledDone": "{{username}} can sign in again."
   },
   "tokens": {
     "title": "API tokens",
@@ -349,7 +364,10 @@
     "LOCKED": "Too many failures: account temporarily locked, retry in 15 minutes.",
     "RATE_LIMITED": "Too many requests, please wait a moment.",
     "UNAVAILABLE": "fail2ban does not answer for this instance.",
-    "INTERNAL": "Server error, please retry later."
+    "INTERNAL": "Server error, please retry later.",
+    "REAUTH_REQUIRED": "Confirm your password for this action.",
+    "PASSWORD_CHANGE_REQUIRED": "Choose a new password first.",
+    "ACCOUNT_DISABLED": "This account is disabled. Ask an admin to enable it."
   },
   "stats": {
     "title": "Statistics",
@@ -590,5 +608,10 @@
     "active": "running",
     "ended": "ended",
     "new": "new"
+  },
+  "reauth": {
+    "title": "Confirm your password",
+    "intro": "This action changes accounts or tokens. Your password stays valid for 10 minutes for the next ones.",
+    "submit": "Confirm"
   }
 }

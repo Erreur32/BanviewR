@@ -1,4 +1,5 @@
 import type { ApiErrorCode, ApiErrorResult, ApiResponse } from '../shared/api.ts';
+import { useReauthStore } from './stores/reauthStore.ts';
 
 export class ApiError extends Error {
   constructor(
@@ -13,7 +14,7 @@ function isApiError(result: unknown): result is ApiErrorResult {
   return typeof result === 'object' && result !== null && (result as { ok?: unknown }).ok === false;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method,
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
@@ -21,7 +22,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   });
   if (!res.ok) throw new ApiError('INTERNAL', `HTTP ${res.status}`);
   const { result } = (await res.json()) as ApiResponse<T | ApiErrorResult>;
-  if (isApiError(result)) throw new ApiError(result.code, result.error);
+  if (isApiError(result)) {
+    // Sensitive admin change: ask the password once, then send the same call again
+    if (result.code === 'REAUTH_REQUIRED' && !retried && (await useReauthStore.getState().ask())) {
+      return request<T>(method, path, body, true);
+    }
+    throw new ApiError(result.code, result.error);
+  }
   return result;
 }
 

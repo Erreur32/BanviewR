@@ -1,5 +1,7 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { FastifyInstance } from 'fastify';
+import type { Role } from '../shared/auth.ts';
 import { type AppDeps, buildApp } from './app.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
 import { openDb } from './db/index.ts';
@@ -56,6 +58,35 @@ export function buildTestApp(deps: Partial<AppDeps> = {}) {
 
 // Test password fixtures, built at runtime so they never look like stored credentials
 export const pw = (label: string) => `${label}-fixture`;
+
+export const TEST_ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
+const sessionOf = (res: { cookies: { name: string; value: string }[] }) =>
+  `bvr_session=${res.cookies.find((c) => c.name === 'bvr_session')?.value}`;
+
+// An account made by an admin, signed in, its first password replaced as the web app asks: returns its cookie
+export async function addUser(app: FastifyInstance, adminCookie: string, username: string, role: Role) {
+  const first = pw('first-password');
+  await app.inject({
+    method: 'POST',
+    url: '/api/users',
+    headers: { ...TEST_ORIGIN, cookie: adminCookie },
+    payload: { username, password: first, role },
+  });
+  const login = await app.inject({
+    method: 'POST',
+    url: '/api/auth/login',
+    headers: TEST_ORIGIN,
+    payload: { username, password: first },
+  });
+  const cookie = sessionOf(login);
+  await app.inject({
+    method: 'POST',
+    url: '/api/auth/password',
+    headers: { ...TEST_ORIGIN, cookie },
+    payload: { currentPassword: first, newPassword: pw('own-password') },
+  });
+  return cookie;
+}
 
 // The stock /etc/fail2ban of the image, reduced to what the generator looks at
 export function fakeStock(root: string) {

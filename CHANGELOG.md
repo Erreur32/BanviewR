@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-05
+
+### Security
+
+- Sensitive admin changes ask the password again when it was last typed more than 10 minutes ago: create, change or delete an account, create an API token. The confirmation has the same lockout as signing in (5 failures).
+- A password chosen by an admin (new account, reset) must be replaced at the first sign-in: the server refuses everything else until then, and the new password must differ from it.
+- Accounts can be disabled: their sessions are signed out, the tokens they created are revoked, and signing in is refused (said only to someone who typed the right password). Nobody can disable or demote their own account, nor the last enabled admin.
+
+### For users
+
+- Preferences lists the sessions of your account (browser, system, address, date) and signs out one of them or all the others.
+- Forgotten password: `docker exec -it banviewr node --import tsx server/cli.ts reset-password <username>` prints a one-time password, to be replaced at the next sign-in. New README section "Accounts".
+
+### For developers
+
+- New error codes `REAUTH_REQUIRED`, `PASSWORD_CHANGE_REQUIRED`, `ACCOUNT_DISABLED`. `POST /api/auth/confirm` types the password again; the web app asks it in a dialog and sends the refused call again.
+- `GET /api/auth/sessions`, `DELETE /api/auth/sessions/:id`, `POST /api/auth/sessions/revoke-others`. `PATCH /api/users/:id` takes `disabled`. User info gains `mustChangePassword`, user rows `disabledAt`.
+- Routes declare `recentAuth: true` (password typed lately) or `passwordPending: true` (open while a password change is due).
+
 ## [0.3.0] - 2026-11-05
 
 ### For users

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { avatars } from '../db/schema.ts';
-import { buildTestApp, pw } from '../test-utils.ts';
+import { addUser, buildTestApp, pw } from '../test-utils.ts';
 import { imageType } from './avatars.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
@@ -61,8 +61,7 @@ describe('avatars', () => {
 
   it('lets an admin take down a picture, and goes with the account', async () => {
     const admin = await signIn('setup', { username: 'admin', password: pw('correct-horse-battery') });
-    await call('POST', '/api/users', admin, { username: 'viewer', password: pw('viewer-password-1'), role: 'viewer' });
-    const viewer = await signIn('login', { username: 'viewer', password: pw('viewer-password-1') });
+    const viewer = await addUser(app, admin, 'viewer', 'viewer');
     await call('POST', '/api/auth/avatar', viewer, { image: PNG.toString('base64') });
     expect(result(await call('DELETE', '/api/users/1/avatar', viewer))).toMatchObject({ code: 'FORBIDDEN' });
 

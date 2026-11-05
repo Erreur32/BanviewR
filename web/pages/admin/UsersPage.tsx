@@ -136,6 +136,14 @@ function UserRowView({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
     },
     onError,
   });
+  const setDisabled = useMutation({
+    mutationFn: (disabled: boolean) => api.patch(`/users/${user.id}`, { disabled }),
+    onSuccess: (_, disabled) => {
+      refresh();
+      notify('success', t(disabled ? 'users.disabledDone' : 'users.enabledDone', { username: user.username }));
+    },
+    onError,
+  });
   const dropAvatar = useMutation({
     mutationFn: () => api.delete(`/users/${user.id}/avatar`),
     onSuccess: () => {
@@ -160,6 +168,8 @@ function UserRowView({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
           <span className="inline-flex items-center gap-2">
             <Avatar user={user} size={24} />
             {user.username} {isSelf && <Badge tone="accent">{t('users.you')}</Badge>}
+            {user.disabledAt && <Badge tone="danger">{t('users.disabled')}</Badge>}
+            {user.mustChangePassword && !user.disabledAt && <Badge>{t('users.mustChange')}</Badge>}
           </span>
         </td>
         <td>
@@ -185,6 +195,25 @@ function UserRowView({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
               <Button size="sm" variant="secondary" onClick={() => setResetting(!resetting)}>
                 {t('users.resetPassword')}
               </Button>
+              {user.disabledAt ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setDisabled.mutate(false)}
+                  disabled={setDisabled.isPending}
+                >
+                  {t('users.enable')}
+                </Button>
+              ) : (
+                <ConfirmButton
+                  size="sm"
+                  confirmLabel={t('common.confirm')}
+                  onConfirm={() => setDisabled.mutate(true)}
+                  disabled={setDisabled.isPending}
+                >
+                  {t('users.disable')}
+                </ConfirmButton>
+              )}
               {user.avatarAt && (
                 <ConfirmButton
                   size="sm"

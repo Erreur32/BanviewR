@@ -6,6 +6,7 @@ import { useCurrentUser } from '../auth.ts';
 import { Avatar } from '../components/Avatar.tsx';
 import { HostPicker } from '../components/HostSwitch.tsx';
 import { type IconName, NavIcon } from '../components/NavIcon.tsx';
+import { ReauthDialog } from '../components/ReauthDialog.tsx';
 import { Logo } from '../components/ui.tsx';
 import { usePersisted } from '../persisted.ts';
 
@@ -200,6 +201,7 @@ export function AppLayout() {
       <main className="min-w-0 flex-1 px-4 py-6 md:px-8">
         <Outlet />
       </main>
+      <ReauthDialog />
     </div>
   );
 }

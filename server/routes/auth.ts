@@ -1,16 +1,22 @@
-import { count, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { apiResponse, okResponse } from '../../shared/api.ts';
-import { authStatus, credentials, password, timezone, userInfo } from '../../shared/auth.ts';
+import { authStatus, credentials, password, sessionId, sessionRow, timezone, userInfo } from '../../shared/auth.ts';
 import { audit } from '../audit.ts';
 import { clearSessionCookie, setSessionCookie } from '../auth/access.ts';
 import { type AttemptKey, clearFailures, lockedUntil, MAX_FAILURES, recordFailure } from '../auth/bruteForce.ts';
 import { hashPassword, verifyPassword } from '../auth/password.ts';
-import { createSession, deleteSession, deleteUserSessions, purgeExpiredSessions } from '../auth/sessions.ts';
+import {
+  confirmSession,
+  createSession,
+  deleteSession,
+  deleteUserSessions,
+  purgeExpiredSessions,
+} from '../auth/sessions.ts';
 import { toIso } from '../dates.ts';
 import { usernameIs } from '../db/queries.ts';
-import { users } from '../db/schema.ts';
+import { sessions, users } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { ok } from '../http.ts';
 
@@ -25,6 +31,7 @@ const toUserInfo = (u: typeof users.$inferSelect) => ({
   role: u.role,
   timezone: u.timezone,
   avatarAt: toIso(u.avatarAt),
+  mustChangePassword: u.mustChangePassword,
 });
 
 export const authRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -95,6 +102,11 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
       }
 
       for (const [key] of keys) clearFailures(db, key);
+      // Told only to someone who knows the password
+      if (user.disabledAt) {
+        audit(req, { action: 'auth.login', ok: false, detail: 'disabled', actor: { ...actor, id: user.id } });
+        throw new AppError('ACCOUNT_DISABLED', 'This account is disabled');
+      }
       db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).run();
       purgeExpiredSessions(db);
       // The session presented with the request (if any) is replaced, not kept alive next to the new one
@@ -121,7 +133,10 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     '/auth/logout',
-    { config: { access: 'read', sessionOnly: true }, schema: { response: { 200: okResponse() } } },
+    {
+      config: { access: 'read', sessionOnly: true, passwordPending: true },
+      schema: { response: { 200: okResponse() } },
+    },
     async (req, reply) => {
       if (req.principal?.kind === 'user') deleteSession(db, req.principal.sessionId);
       clearSessionCookie(reply);
@@ -133,7 +148,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/auth/password',
     {
-      config: { access: 'read', sessionOnly: true, rateLimit: AUTH_RATE_LIMIT },
+      config: { access: 'read', sessionOnly: true, passwordPending: true, rateLimit: AUTH_RATE_LIMIT },
       schema: {
         body: z.object({ currentPassword: z.string().max(256), newPassword: password }),
         response: { 200: okResponse() },
@@ -147,10 +162,97 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
         audit(req, { action: 'auth.password', ok: false, detail: 'wrong current password' });
         throw new AppError('INVALID_CREDENTIALS', 'Current password is wrong');
       }
+      // The password an admin chose must really go
+      if (await verifyPassword(user?.passwordHash, req.body.newPassword)) {
+        throw new AppError('CONFLICT', 'The new password must differ from the current one');
+      }
       const passwordHash = await hashPassword(req.body.newPassword);
-      db.update(users).set({ passwordHash }).where(eq(users.id, p.id)).run();
+      db.update(users).set({ passwordHash, mustChangePassword: false }).where(eq(users.id, p.id)).run();
       deleteUserSessions(db, p.id, p.sessionId);
+      confirmSession(db, p.sessionId);
       audit(req, { action: 'auth.password', ok: true });
+      return ok();
+    },
+  );
+
+  // Types the password again before a sensitive admin change, same lockout as signing in
+  app.post(
+    '/auth/confirm',
+    {
+      config: { access: 'read', sessionOnly: true, rateLimit: AUTH_RATE_LIMIT },
+      schema: { body: z.object({ password: z.string().max(256) }), response: { 200: okResponse() } },
+    },
+    async (req) => {
+      const p = req.principal;
+      if (p?.kind !== 'user') throw new AppError('UNAUTHORIZED', 'Authentication required');
+      const key: AttemptKey = `user:${p.name.toLowerCase()}`;
+      if (lockedUntil(db, key)) throw new AppError('LOCKED', 'Too many failed attempts, retry later');
+      const user = db.select().from(users).where(eq(users.id, p.id)).get();
+      if (!(await verifyPassword(user?.passwordHash, req.body.password))) {
+        recordFailure(db, key, MAX_FAILURES.user);
+        audit(req, { action: 'auth.confirm', ok: false });
+        throw new AppError('INVALID_CREDENTIALS', 'Wrong password');
+      }
+      clearFailures(db, key);
+      confirmSession(db, p.sessionId);
+      audit(req, { action: 'auth.confirm', ok: true });
+      return ok();
+    },
+  );
+
+  // The signed-in user's own sessions, to sign out a forgotten browser
+  app.get(
+    '/auth/sessions',
+    {
+      config: { access: 'read', sessionOnly: true },
+      schema: { response: { 200: okResponse({ sessions: z.array(sessionRow) }) } },
+    },
+    async (req) => {
+      const p = req.principal;
+      if (p?.kind !== 'user') throw new AppError('UNAUTHORIZED', 'Authentication required');
+      const rows = db.select().from(sessions).where(eq(sessions.userId, p.id)).orderBy(desc(sessions.createdAt)).all();
+      return ok({
+        sessions: rows.map((r) => ({
+          id: r.id,
+          ip: r.ip,
+          userAgent: r.userAgent,
+          createdAt: r.createdAt.toISOString(),
+          expiresAt: r.expiresAt.toISOString(),
+          current: r.id === p.sessionId,
+        })),
+      });
+    },
+  );
+
+  app.delete(
+    '/auth/sessions/:id',
+    {
+      config: { access: 'read', sessionOnly: true },
+      schema: { params: z.object({ id: sessionId }), response: { 200: okResponse() } },
+    },
+    async (req) => {
+      const p = req.principal;
+      if (p?.kind !== 'user') throw new AppError('UNAUTHORIZED', 'Authentication required');
+      // Only one of your own: someone else's id finds nothing
+      const gone = db
+        .delete(sessions)
+        .where(and(eq(sessions.id, req.params.id), eq(sessions.userId, p.id)))
+        .returning({ id: sessions.id })
+        .get();
+      if (!gone) throw new AppError('NOT_FOUND', 'Session not found');
+      audit(req, { action: 'auth.session.revoke', ok: true, detail: gone.id === p.sessionId ? 'current' : 'other' });
+      return ok();
+    },
+  );
+
+  app.post(
+    '/auth/sessions/revoke-others',
+    { config: { access: 'read', sessionOnly: true }, schema: { response: { 200: okResponse() } } },
+    async (req) => {
+      const p = req.principal;
+      if (p?.kind !== 'user') throw new AppError('UNAUTHORIZED', 'Authentication required');
+      deleteUserSessions(db, p.id, p.sessionId);
+      audit(req, { action: 'auth.session.revoke', ok: true, detail: 'others' });
       return ok();
     },
   );

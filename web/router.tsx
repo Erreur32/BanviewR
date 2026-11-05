@@ -12,6 +12,7 @@ import { NotificationsPage } from './pages/admin/NotificationsPage.tsx';
 import { TokensPage } from './pages/admin/TokensPage.tsx';
 import { UsersPage } from './pages/admin/UsersPage.tsx';
 import { BlocklistsPage } from './pages/BlocklistsPage.tsx';
+import { ChangePasswordPage } from './pages/ChangePasswordPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { FirewallPage } from './pages/FirewallPage.tsx';
 import { InstancesPage } from './pages/InstancesPage.tsx';
@@ -82,8 +83,20 @@ const appRoute = createRoute({
     const status = await context.queryClient.ensureQueryData(authStatusQuery);
     if (status.setupRequired) throw redirect({ to: '/setup' });
     if (!status.user) throw redirect({ to: '/login' });
+    if (status.user.mustChangePassword) throw redirect({ to: '/change-password' });
   },
   component: AppLayout,
+});
+
+const changePasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/change-password',
+  beforeLoad: async ({ context }) => {
+    const status = await context.queryClient.ensureQueryData(authStatusQuery);
+    if (!status.user) throw redirect({ to: '/login' });
+    if (!status.user.mustChangePassword) throw redirect({ to: '/' });
+  },
+  component: ChangePasswordPage,
 });
 
 const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage });
@@ -123,6 +136,7 @@ const notificationsRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   setupRoute,
   loginRoute,
+  changePasswordRoute,
   appRoute.addChildren([
     dashboardRoute,
     instancesRoute,
