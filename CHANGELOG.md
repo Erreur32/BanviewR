@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-05
+
+### Fixed
+
+- Bans unbanned less than a minute after they happened now reach the history: fail2ban deletes the bans of an address when it is unbanned, so BanviewR copies them first.
+- Embedded mode: start, stop and reload of a jail failed ("fail2ban did not answer"), the client read the jail files from `/etc/fail2ban` instead of the embedded folder.
+- Embedded mode: a jail started or reloaded from BanviewR gets the base `ignoreip` back at once, not up to a minute later.
+- Embedded mode: IPv6 bans no longer fail on `DOCKER-USER` (and leave an empty ip6tables chain) when Docker does not manage ip6tables; they stay in `INPUT`. The `DOCKER-USER` action is now BanviewR's own `banviewr-docker-user`, next to the stock actions.
+
+### For developers
+
+- `GET /api/embedded`: `firewall.dockerUser6` tells whether Docker made an IPv6 `DOCKER-USER` chain.
+
 ## [0.2.0] - 2026-11-05
 
 ### For users

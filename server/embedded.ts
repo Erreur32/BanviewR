@@ -84,10 +84,19 @@ const hasDockerUser = (save: string | null) => !!save && /^:DOCKER-USER /m.test(
 // Same backend as the host, told by where Docker's rules are. Rules in the other iptables backend would
 // still apply, but DOCKER-USER only exists where Docker made it, and a mixed firewall is hard to read.
 // Inputs are the filter table of each iptables backend (null: not loaded or not readable) and `nft list tables`.
-export function pickFirewall(fw: { legacy: string | null; nft: string | null; nftTables: string | null }) {
+type Dumps = {
+  legacy: string | null;
+  nft: string | null;
+  nftTables: string | null;
+  legacy6?: string | null;
+  nft6?: string | null;
+};
+
+export function pickFirewall(fw: Dumps) {
   const pick = (backend: EmbeddedFirewall['backend'], dockerUser = false): EmbeddedFirewall => ({
     backend,
     dockerUser,
+    dockerUser6: dockerUser && hasDockerUser(backend === 'iptables-legacy' ? (fw.legacy6 ?? null) : (fw.nft6 ?? null)),
   });
   if (hasDockerUser(fw.legacy)) return pick('iptables-legacy', true);
   if (hasDockerUser(fw.nft)) return pick('iptables-nft', true);
@@ -100,13 +109,23 @@ export function pickFirewall(fw: { legacy: string | null; nft: string | null; nf
 
 export async function detectFirewall() {
   // Asking the legacy tool for a table that is not loaded would load its module on the host
-  const legacyTables = await readFile('/proc/net/ip_tables_names', 'utf8').catch(() => '');
-  const [legacy, nft, nftTables] = await Promise.all([
-    /^filter$/m.test(legacyTables) ? dump('iptables-legacy-save', ['-t', 'filter']) : null,
+  const loaded = (file: string) =>
+    readFile(file, 'utf8').then(
+      (names) => /^filter$/m.test(names),
+      () => false,
+    );
+  const [legacyOn, legacy6On] = await Promise.all([
+    loaded('/proc/net/ip_tables_names'),
+    loaded('/proc/net/ip6_tables_names'),
+  ]);
+  const [legacy, nft, nftTables, legacy6, nft6] = await Promise.all([
+    legacyOn ? dump('iptables-legacy-save', ['-t', 'filter']) : null,
     dump('iptables-nft-save', ['-t', 'filter']),
     dump('nft', ['list', 'tables']),
+    legacy6On ? dump('ip6tables-legacy-save', ['-t', 'filter']) : null,
+    dump('ip6tables-nft-save', ['-t', 'filter']),
   ]);
-  return pickFirewall({ legacy, nft, nftTables });
+  return pickFirewall({ legacy, nft, nftTables, legacy6, nft6 });
 }
 
 // fail2ban interpolates %(name)s in values: a literal % is written %%
@@ -127,17 +146,15 @@ export function writeBaseConfig(
   { stockDir, ignoreip, firewall = null }: { stockDir: string; ignoreip: string[]; firewall?: EmbeddedFirewall | null },
 ) {
   mkdirSync(join(paths.confDir, 'jail.d'), { recursive: true });
-  for (const entry of readdirSync(stockDir)) {
-    if (entry === 'jail.d' || entry === 'fail2ban.d' || entry.endsWith('.local')) continue;
-    const link = join(paths.confDir, entry);
-    const target = join(stockDir, entry);
-    const existing = lstatSync(link, { throwIfNoEntry: false });
-    // A real file the admin put there wins over the stock one
-    if (existing && !existing.isSymbolicLink()) continue;
-    if (existing && readlinkSync(link) === target) continue;
-    if (existing) rmSync(link);
-    symlinkSync(target, link);
-  }
+  // action.d is a real folder of links, so BanviewR's own action can sit next to the stock ones
+  const actionDir = join(paths.confDir, 'action.d');
+  if (lstatSync(actionDir, { throwIfNoEntry: false })?.isSymbolicLink()) rmSync(actionDir);
+  mkdirSync(actionDir, { recursive: true });
+  linkStock(stockDir, paths.confDir, (entry) => entry === 'jail.d' || entry === 'fail2ban.d' || entry === 'action.d');
+  const stockActions = join(stockDir, 'action.d');
+  if (lstatSync(stockActions, { throwIfNoEntry: false }))
+    linkStock(stockActions, actionDir, (e) => e === DOCKER_ACTION_FILE);
+  writeFileSync(join(actionDir, DOCKER_ACTION_FILE), dockerAction(firewall));
   writeFileSync(
     join(paths.confDir, 'fail2ban.local'),
     `${HEADER}
@@ -165,6 +182,35 @@ ignoreip = ${ignoreip.map(iniValue).join(' ')}
   );
 }
 
+// Links each stock entry, except the skipped ones and .local files. A real file the admin put there wins.
+function linkStock(from: string, to: string, skip: (entry: string) => boolean) {
+  for (const entry of readdirSync(from)) {
+    if (skip(entry) || entry.endsWith('.local')) continue;
+    const link = join(to, entry);
+    const target = join(from, entry);
+    const existing = lstatSync(link, { throwIfNoEntry: false });
+    if (existing && !existing.isSymbolicLink()) continue;
+    if (existing && readlinkSync(link) === target) continue;
+    if (existing) rmSync(link);
+    symlinkSync(target, link);
+  }
+}
+
+const DOCKER_ACTION_FILE = 'banviewr-docker-user.conf';
+
+// Bans on every port in DOCKER-USER. Without an IPv6 DOCKER-USER chain (Docker not managing ip6tables),
+// IPv6 bans skip it: `true` stands in for ip6tables, so they stay in INPUT and leave no empty chain behind.
+function dockerAction(fw: EmbeddedFirewall | null) {
+  return `${HEADER}
+[INCLUDES]
+before = iptables-allports.conf
+
+[Init]
+chain = DOCKER-USER
+protocol = all
+${fw?.dockerUser6 ? '' : '\n[Init?family=inet6]\niptables = true\n'}`;
+}
+
 // DOCKER-USER sees the traffic forwarded to containers after DNAT, so the container port, not the
 // published one: the extra action bans on every port. Jails with their own `action` add %(action_docker)s.
 function firewallDefaults(fw: EmbeddedFirewall | null) {
@@ -172,7 +218,7 @@ function firewallDefaults(fw: EmbeddedFirewall | null) {
   if (fw?.backend === 'nftables') lines.push('banaction = nftables', 'banaction_allports = nftables[type=allports]');
   if (fw?.dockerUser) {
     lines.push(
-      'action_docker = iptables-allports[name="%(__name__)s-du", chain="DOCKER-USER", protocol="all"]',
+      'action_docker = banviewr-docker-user[name="%(__name__)s-du"]',
       'action = %(action_)s',
       '         %(action_docker)s',
     );
@@ -348,8 +394,8 @@ export function createEmbedded(
     await enforceIgnoreip();
   }
 
-  // shortcut: a jail started or reloaded later runs on its own ignoreip until the next watch tick (1 min),
-  // call this after jail actions on the embedded instance if that window matters
+  // Also called after a jail action from BanviewR (app.connect); a reload done outside BanviewR waits for the
+  // next watch tick (1 min)
   async function enforceIgnoreip() {
     if (!current) return;
     try {
@@ -388,6 +434,7 @@ export function createEmbedded(
     start,
     stop,
     check,
+    enforceIgnoreip,
     // Boot: start again what the UI started before
     async resume() {
       if (!store.enabled()) return;

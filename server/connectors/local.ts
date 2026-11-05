@@ -167,13 +167,16 @@ export function localConnector(
     ban: async (name, target) => void (await command(['set', name, 'banip', target])),
     unban: async (name, target) => void (await command(['set', name, 'unbanip', target])),
     async jailAction(name, action) {
+      // These read the jail files on the client side: from the instance's folder, not /etc/fail2ban
+      // (an embedded instance has its own)
+      const withConf = (args: string[]) => command(['-c', host.confPath, ...args]);
       if (action !== 'start') {
-        await command([action, name]);
+        await withConf([action, name]);
         return;
       }
       // A stopped jail is gone from the server: `start <jail>` and `reload <jail>` both
       // answer "does not exist", only a full reload brings it back from the config
-      await command(['reload']);
+      await withConf(['reload']);
       await jail(name);
     },
     activeBans: async () => activeBans(host.dbPath),

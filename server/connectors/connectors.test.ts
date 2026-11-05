@@ -198,14 +198,20 @@ describe('localConnector commands', () => {
 
   it('starts a stopped jail with a full reload', async () => {
     const log = join(dir, 'calls');
-    const host = connector(`echo "$3 $4" >> ${log}; echo "Status for the jail: x"`);
+    const host = connector(`echo "$*" >> ${log}; echo "Status for the jail: x"`);
     await host.jailAction('x', 'start');
+    await host.jailAction('x', 'reload');
     const calls = readFileSync(log, 'utf8').trim().split('\n');
-    expect(calls.map((c) => c.trim())).toEqual(['reload', 'status x']);
+    // The jail files are read from the instance's folder
+    expect(calls).toEqual([
+      `-s /run/x.sock -c ${dir} reload`,
+      '-s /run/x.sock status x',
+      `-s /run/x.sock -c ${dir} reload x`,
+    ]);
   });
 
   it('reports a jail that a reload does not bring back', async () => {
-    const body = `[ "$3" = reload ] && exit 0; echo "Sorry but the jail 'x' does not exist"; exit 255`;
+    const body = `[ "$5" = reload ] && exit 0; echo "Sorry but the jail 'x' does not exist"; exit 255`;
     await expect(connector(body).jailAction('x', 'start')).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
