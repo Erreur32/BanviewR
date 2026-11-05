@@ -73,7 +73,8 @@ export function filterShares(
   topJails: { jail: string; bans: number }[],
   configs: { name: string; config: { filter: string | null } | null }[],
 ) {
-  const filterOf = new Map(configs.map((j) => [j.name, j.config?.filter || j.name]));
+  // sshd and sshd[mode=aggressive] read the same service: group by filter name, options left out
+  const filterOf = new Map(configs.map((j) => [j.name, j.config?.filter?.replace(/\[.*$/, '') || j.name]));
   const totals = new Map<string, number>();
   for (const { jail, bans } of topJails) {
     const filter = filterOf.get(jail) ?? jail;

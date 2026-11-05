@@ -82,7 +82,7 @@ describe('filterShares', () => {
       ],
       [
         { name: 'sshd', config: { filter: 'sshd' } },
-        { name: 'sshd-ddos', config: { filter: 'sshd' } },
+        { name: 'sshd-ddos', config: { filter: 'sshd[mode=ddos]' } },
         { name: 'nginx-http-auth', config: null },
       ],
     );

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-05
+
+### Fixed
+
+- Jail filters read from the configuration now resolve fail2ban variables such as `%(mode)s` (from the jail, then `[DEFAULT]`): the stock `sshd` jail shows `sshd[mode=normal]` instead of `sshd[mode=%(mode)s]`.
+- Attack types group bans by filter name without its options, so `sshd` and `sshd[mode=normal]` add up instead of showing twice.
+
 ## [0.6.0] - 2026-11-05
 
 ### For users
