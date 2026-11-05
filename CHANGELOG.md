@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dashboard with two modes, switched at the top of the page and remembered in the browser. Simple: a few big figures, latest alerts, bans per day over 7 days, health rings, worst addresses, jails, and a one-word summary. Full: six figures with the trend against the 24 hours before, a threat band (addresses by how often they came back), bans per hour stacked by jail, share per jail, bans per day over 14 days, instances, top addresses, countries and network operators, latest bans.
 - Each jail keeps the same color everywhere (sshd and recidive always first), checked for contrast and color blindness.
 - Menu in four groups (Monitor, Act, Configure, Administration). The instance is chosen once in the sidebar and stays the same from page to page.
+- Statistics page rebuilt: each chart has its own format switch, remembered in the browser. Bans over time per jail (bars, lines, table; per week past 120 days), share of each jail (bars, segment, donut, table), when the attacks hit (week x hour heatmap, 24 h clock, table), where they come from (map, bars, table), a year of bans day by day, top addresses and network operators.
 
 ### For developers
 
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `F2B_CLIENT` sets the fail2ban client command.
 - `/api/hosts/:hostId/stats`: `slots` are now split per jail (`{ at, jail, bans }`), and a new `orgs` list counts bans per network operator.
 - Hand-written chart pieces in `web/components/charts.tsx` (stacked bars with tooltip, donut, ring, bar list, sparkline) and a `Segmented` switch in `web/components/ui.tsx`.
+- More chart pieces: `LineChart`, `ShareBar`, `CellGrid` (heatmap and calendar), `Clock`; one sequential ramp shared with the world map. `usePersisted` (`web/persisted.ts`) remembers a choice per browser.
 - `npm run dev:embedded -- start|stop|logs`: BanviewR with its embedded fail2ban in a container with its own network namespace, for development. `scripts/dev-f2b-client.sh` lets a dev server on the host reach it without a local fail2ban.
 
 ## [0.1.1] - 2026-11-05

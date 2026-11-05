@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CountryCount } from '../../shared/geoip.ts';
 import world from '../world.json';
+import { SEQ_EMPTY as EMPTY, SEQ_RAMP as RAMP } from './charts.tsx';
 import { useCountryName } from './IpOrigin.tsx';
 
-// One hue, darkest for the fewest bans: on a dark surface magnitude reads as brightness
-const RAMP = ['#0d419d', '#1158c7', '#1f6feb', '#58a6ff', '#a5d6ff'];
-const EMPTY = '#21262d';
 // Small countries (Singapore, Hong Kong...) have no outline at this scale
 const ON_MAP = new Set(world.countries.map((c) => c.code));
 
