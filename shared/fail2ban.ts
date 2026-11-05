@@ -76,6 +76,8 @@ export const threatRow = z.object({
   ip: z.string(),
   bans: z.number(),
   jails: z.array(z.string()),
+  // First and last ban inside the window
+  firstBanAt: z.string(),
   lastBanAt: z.string(),
   geo: ipGeo,
 });

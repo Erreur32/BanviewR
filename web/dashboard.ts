@@ -62,6 +62,15 @@ export function previousWindow(slots: BanStats['slots'], now: number, hours: num
 export type Severity = { info: number; low: number; medium: number; high: number; critical: number };
 export const SEVERITY_LEVELS = ['info', 'low', 'medium', 'high', 'critical'] as const;
 
+// Reds from light to dark, the darkest for the worst; text kept readable on each
+export const LEVEL_STYLE: Record<(typeof SEVERITY_LEVELS)[number], string> = {
+  info: 'bg-[#c9d1d9] text-bg0',
+  low: 'bg-[#ffa198] text-bg0',
+  medium: 'bg-[#ff7b72] text-bg0',
+  high: 'bg-[#da3633] text-white',
+  critical: 'bg-[#8e1519] text-white',
+};
+
 // Addresses by how often they came back: through recidive is critical, then 10+, 4 to 9, 2 or 3 bans.
 // Addresses banned once are the rest of the period. shortcut: threats are capped at 100 by the API,
 // past that the low levels are undercounted; add a server count if it matters

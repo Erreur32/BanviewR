@@ -29,7 +29,9 @@
       "act": "Agir",
       "configure": "Configurer",
       "admin": "Administration"
-    }
+    },
+    "addresses": "Adresses",
+    "live": "En direct"
   },
   "roles": {
     "admin": "Admin",
@@ -529,5 +531,49 @@
     "urlHint": "Texte brut, une adresse ou un réseau par ligne. Les commentaires et les entrées IPv6 sont ignorés.",
     "add": "Ajouter (désactivée)",
     "added": "{{name}} ajoutée, activez-la pour la charger"
+  },
+  "addresses": {
+    "title": "Adresses",
+    "intro": "Les adresses qui reviennent : bannies au moins deux fois sur la période, classées par niveau. Cliquez une adresse pour sa fiche complète.",
+    "window": "Période",
+    "windows": {
+      "day": "24 h",
+      "week": "7 jours",
+      "month": "30 jours"
+    },
+    "search": "Filtrer",
+    "searchHint": "Adresse, pays, opérateur ou jail",
+    "open": "Ouvrir la fiche de {{ip}}",
+    "all": "Toutes",
+    "level": "Niveau",
+    "jails": "Jails",
+    "first": "Premier ban",
+    "last": "Dernier ban",
+    "now": "Maintenant",
+    "bannedNow": "bannie",
+    "free": "libre",
+    "empty": "Aucune adresse n'est revenue sur cette période.",
+    "noMatch": "Aucune adresse ne correspond au filtre.",
+    "capped": "Seules les {{count}} adresses les plus revenues sont listées."
+  },
+  "live": {
+    "title": "En direct",
+    "intro": "Les bans au fil de l'eau : les bans en cours sont lus dans fail2ban toutes les 5 secondes, l'historique local toutes les 15 secondes.",
+    "running": "Mise à jour automatique",
+    "paused": "En pause",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "bannedNow": "Bannies maintenant",
+    "lastHour": "Bans dans la dernière heure",
+    "lastBan": "Dernier ban",
+    "perMinute": "Bans par minute, dernière heure",
+    "feed": "Fil des bans",
+    "feedHint": "Les 100 derniers, les nouveaux depuis l'ouverture de la page en surbrillance.",
+    "empty": "Aucun ban pour l'instant.",
+    "when": "Heure",
+    "state": "État",
+    "active": "en cours",
+    "ended": "terminé",
+    "new": "nouveau"
   }
 }

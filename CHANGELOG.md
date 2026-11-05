@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Each jail keeps the same color everywhere (sshd and recidive always first), checked for contrast and color blindness.
 - Menu in four groups (Monitor, Act, Configure, Administration). The instance is chosen once in the sidebar and stays the same from page to page.
 - Statistics page rebuilt: each chart has its own format switch, remembered in the browser. Bans over time per jail (bars, lines, table; per week past 120 days), share of each jail (bars, segment, donut, table), when the attacks hit (week x hour heatmap, 24 h clock, table), where they come from (map, bars, table), a year of bans day by day, top addresses and network operators.
+- Addresses page: addresses that came back (banned twice or more in 24 h, 7 or 30 days), ranked by level (low to critical), with jails, first and last ban, whether they are banned now, a filter (address, country, operator, jail) and a shortcut to any address page.
+- Live page: running bans read from fail2ban every 5 seconds, merged with the local history, bans per minute over the last hour, new bans since the page opened highlighted, pause button.
 
 ### For developers
 
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/api/hosts/:hostId/stats`: `slots` are now split per jail (`{ at, jail, bans }`), and a new `orgs` list counts bans per network operator.
 - Hand-written chart pieces in `web/components/charts.tsx` (stacked bars with tooltip, donut, ring, bar list, sparkline) and a `Segmented` switch in `web/components/ui.tsx`.
 - More chart pieces: `LineChart`, `ShareBar`, `CellGrid` (heatmap and calendar), `Clock`; one sequential ramp shared with the world map. `usePersisted` (`web/persisted.ts`) remembers a choice per browser.
+- `/api/hosts/:hostId/threats` rows (and the MCP threats tool) gain `firstBanAt`, the first ban inside the window.
 - `npm run dev:embedded -- start|stop|logs`: BanviewR with its embedded fail2ban in a container with its own network namespace, for development. `scripts/dev-f2b-client.sh` lets a dev server on the host reach it without a local fail2ban.
 
 ## [0.1.1] - 2026-11-05

@@ -25,6 +25,7 @@ import { Badge, ErrorText, Segmented } from '../components/ui.tsx';
 import {
   dayColumns,
   hourColumns,
+  LEVEL_STYLE,
   previousWindow,
   SEVERITY_LEVELS,
   type Severity,
@@ -140,14 +141,6 @@ function Trend({ change }: { change: number | null }) {
     </span>
   );
 }
-
-const LEVEL_STYLE: Record<(typeof SEVERITY_LEVELS)[number], string> = {
-  info: 'bg-[#c9d1d9] text-bg0',
-  low: 'bg-[#ffa198] text-bg0',
-  medium: 'bg-[#ff7b72] text-bg0',
-  high: 'bg-[#da3633] text-white',
-  critical: 'bg-[#8e1519] text-white',
-};
 
 function SeverityBand({ levels }: { levels: Severity }) {
   const { t } = useTranslation();
