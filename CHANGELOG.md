@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-05
+
 ### For users
 
 - Embedded fail2ban, first part of v0.2: when the machine has no fail2ban, an admin can start one inside the BanviewR container from the Instances page, and stop it. It comes back with the container once started, and stops for good when a host fail2ban shows up (never both at once). Its configuration and database live in `DATA_DIR/fail2ban/`, with loopback, private ranges and Docker networks always in `ignoreip`.
