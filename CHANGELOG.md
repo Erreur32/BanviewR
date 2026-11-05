@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-05
+
+### Security
+
+- Accounts can only be managed from a signed-in session: `/api/users` refused API tokens with the `read` or `write` scope, but accepted an `admin` token, so a stolen admin token could create an admin account that outlived the token's revocation. Scripts that managed accounts with a token now get `FORBIDDEN`, as token management already did.
+
+### For users
+
+- New `operator` role, between read-only and admin: bans, unbans, starts, stops and reloads jails, without access to the administration pages. An admin moved to operator or read-only loses the tokens they created.
+
 ## [0.2.1] - 2026-11-05
 
 ### Fixed

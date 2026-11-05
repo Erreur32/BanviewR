@@ -30,7 +30,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 export function IpPage() {
   const { t } = useTranslation();
   const formatDate = useFormatDateTime();
-  const canWrite = useCurrentUser().role === 'admin';
+  const canWrite = useCurrentUser().role !== 'viewer';
   const { hostId: hostParam, ip } = route.useParams();
   const hostId = Number(hostParam);
   const [shown, setShown] = useState(PAGE);

@@ -24,7 +24,7 @@ export const users = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     username: text('username').notNull().unique(),
     passwordHash: text('password_hash').notNull(),
-    role: text('role', { enum: ['admin', 'viewer'] })
+    role: text('role', { enum: ['admin', 'operator', 'viewer'] })
       .$type<Role>()
       .notNull(),
     // IANA time zone used to display dates, 'browser' follows the browser setting

@@ -272,7 +272,7 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
 
 export function JailsPage() {
   const { t } = useTranslation();
-  const canWrite = useCurrentUser().role === 'admin';
+  const canWrite = useCurrentUser().role !== 'viewer';
 
   return (
     <div className="max-w-5xl space-y-4">

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.2.1-111827?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.2.2-111827?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
@@ -26,7 +26,7 @@
 BanviewR drives the firewall of the machines it manages. Every design choice follows from that.
 - **Private by design.** Your data stays on your machines, in a local SQLite database. No cloud, no account with us, no subscription, no telemetry. BanviewR contacts no third-party service by default: anything that has to reach outside (blocklist downloads, IP information, webhooks) stays off until you turn it on, and says what it sends and where.
 - **Safe by default.** The server listens on loopback only, there is no default password, passwords are hashed with argon2id, and sessions and API tokens are stored as hashes only. A route that does not declare its access level is admin only: forgetting fails closed, not open.
-- **Least privilege.** `viewer` accounts and `read` tokens can look but never change anything, whether from the UI, the API or MCP. A token can be limited to some fail2ban instances.
+- **Least privilege.** Three roles: `viewer` looks, `operator` also bans, unbans and drives jails, `admin` also manages the app. `read` tokens can look but never change anything, whether from the API or MCP, and a token can be limited to some fail2ban instances. Accounts and tokens are managed from a signed-in session only, never with a token.
 - **The host's fail2ban comes first.** When fail2ban is already installed on a machine, BanviewR drives it and never starts its own. The embedded fail2ban is only offered where none exists, and the two never run at the same time.
 - **One API for everyone.** The web UI, scripts and AI agents (MCP) use the same API, with the same permissions and the same audit log. Nothing is UI only.
 - **Multi-instance from day one.** Every piece of data belongs to a fail2ban instance, even when there is only one, so several instances per machine and several machines need no rewrite.
@@ -52,7 +52,7 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 - Firewall audit: iptables, ipset and nftables rules set by fail2ban
 - Blocklists, notifications (webhook, Discord, Telegram, MQTT), MCP server for AI agents
 - Embedded mode: BanviewR runs its own fail2ban where none is installed, in the host firewall and Docker's `DOCKER-USER`
-- Multi-user auth with brute force protection, API tokens, audit log, English and French UI
+- Multi-user auth with three roles (viewer, operator, admin), brute force protection, API tokens, audit log, English and French UI
 
 ## Roadmap
 

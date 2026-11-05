@@ -27,7 +27,7 @@ declare module 'fastify' {
 }
 
 const SCOPE_RANK: Record<Scope, number> = { read: 1, write: 2, admin: 3 };
-const ROLE_SCOPES: Record<Role, Scope[]> = { admin: ['admin'], viewer: ['read'] };
+const ROLE_SCOPES: Record<Role, Scope[]> = { admin: ['admin'], operator: ['write'], viewer: ['read'] };
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export const hasScope = (scopes: Scope[], needed: Scope) => scopes.some((s) => SCOPE_RANK[s] >= SCOPE_RANK[needed]);
