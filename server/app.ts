@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyServerOptions } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import type { LocalDetection } from '../shared/hosts.ts';
+import { recordAudit } from './audit.ts';
 import { registerAccessControl } from './auth/access.ts';
 import type { ConnectorFactory } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
@@ -73,6 +74,17 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
       store: settingsStore(db),
       log: app.log,
       onHostStop: (found) => notifyEmbeddedStop(db, found),
+      onTrialEnd: () =>
+        recordAudit(
+          db,
+          { principal: null, ip: 'system' },
+          {
+            action: 'embedded.trialExpired',
+            ok: true,
+            target: 'embedded',
+            detail: 'Trial start not confirmed in time, stopped',
+          },
+        ),
     }),
   );
   app.addHook('onClose', async () => {

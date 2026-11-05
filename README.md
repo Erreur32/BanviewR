@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.6.1-111827?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.7.0-111827?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
@@ -122,6 +122,13 @@ Then open `http://127.0.0.1:3025`, create the first admin and start the embedded
 | `/etc/machine-id`, `/etc/localtime` (ro) | the journal reader finds the host's journal, syslog dates read in local time                     |
 | `/var/run/fail2ban:/var/run/fail2ban:ro` | a host fail2ban that appears opens its socket there: BanviewR then stops its own                 |
 
+**Lockout guards.** The embedded fail2ban changes the firewall of the machine it runs on, so a start is made to undo itself:
+
+- A window lists what happens first: VM or bare metal (CPU flags and DMI names), whether the container really shares the host network (without it, bans only apply to the container), what is never banned, and the way back (`docker stop banviewr`: fail2ban removes its rules when it stops). The password must have been typed in the last 10 minutes.
+- Every start from the UI is a 10 minute trial. Confirm it from the Instances page, or the embedded fail2ban stops on its own and removes its rules. A container restart during the trial leaves it off; only a confirmed start comes back with the container.
+- Never banned: loopback, private ranges, CGNAT (Tailscale), the Docker networks, the machine's own addresses (`ignoreself`) and the public address of the admin who started it, as BanviewR sees it (behind a reverse proxy, set `TRUST_PROXY` or the proxy's address is seen instead).
+- In both modes nobody can ban the address they are using, and MCP agents cannot ban private addresses or those of signed-in users.
+
 **Jails.** Put them in `data/fail2ban/etc/jail.d/*.local`, then restart the embedded fail2ban from the Instances page. The stock `jail.conf`, filters and actions come from the image. No jail is enabled by default: Debian's `defaults-debian.conf` is not used. On Debian 12 and later, sshd logs to the journal only:
 
 ```ini
@@ -185,7 +192,7 @@ npm run dev:embedded -- logs
 npm run dev:embedded -- stop    # removes the container, data-dev/ is kept
 ```
 
-Its config and fail2ban database live in `data-dev/fail2ban/`, mounted at the same path inside the container. Start the embedded fail2ban from the Instances page or with `POST /api/embedded/start`; a `manual` jail is added for ban tests. The page served on 3027 is the image's build: for the current UI, run `PORT=3027 VITE_PORT=5186 npx vite`.
+Its config and fail2ban database live in `data-dev/fail2ban/`, mounted at the same path inside the container. Start the embedded fail2ban from the Instances page or with `POST /api/embedded/start` (a trial: confirm it with `POST /api/embedded/confirm` within 10 minutes); a `manual` jail is added for ban tests. The page served on 3027 is the image's build: for the current UI, run `PORT=3027 VITE_PORT=5186 npx vite`.
 
 The development machine has no `fail2ban-client`. A dev server on the host can still drive that fail2ban with `F2B_CLIENT=./scripts/dev-f2b-client.sh`, which runs the container's client through `docker exec`, and `F2B_SOCKET`, `F2B_DB`, `F2B_CONF` pointing into `data-dev/fail2ban/`.
 

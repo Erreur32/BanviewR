@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-05
+
+### For users
+
+- Embedded fail2ban, lockout guards. Starting it opens a window first that says what will change: VM or bare metal, whether the container shares the host network (bans only protect the machine when it does), what is never banned, and the command to undo it. The password must have been typed in the last 10 minutes.
+- Every start is a 10 minute trial: without a confirmation from the Instances page it stops on its own and removes its rules, and a container restart during the trial leaves it off. The expiry is written to the audit log.
+- The public address of the admin who starts it is added to the never-banned list (private addresses already are).
+
+### API
+
+- `POST /api/embedded/confirm` keeps a trial start. `/api/embedded` responses carry `callerIp`, and the status gains `trialUntil`, `trustedIp`, `machine` and `hostNetwork`, plus the stop reason `TRIAL_EXPIRED`.
+
 ## [0.6.1] - 2026-11-05
 
 ### Fixed

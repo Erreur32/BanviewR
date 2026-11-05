@@ -59,6 +59,14 @@ export const embeddedFirewall = z.object({
 });
 export type EmbeddedFirewall = z.infer<typeof embeddedFirewall>;
 
+// Where the embedded fail2ban would change the firewall: a VM (its own firewall, the hypervisor console
+// as a way back), bare metal, or unknown (arm64 without a known VM name)
+export const embeddedMachine = z.object({
+  kind: z.enum(['vm', 'physical', 'unknown']),
+  name: z.string().nullable(),
+});
+export type EmbeddedMachine = z.infer<typeof embeddedMachine>;
+
 export const embeddedStatus = z.object({
   blockedBy: embeddedBlock.nullable(),
   // Started from the UI and not stopped since: it comes back with the container
@@ -67,12 +75,20 @@ export const embeddedStatus = z.object({
   pid: z.number().nullable(),
   startedAt: z.string().nullable(),
   // Why it last stopped without being asked: it exited, or a host fail2ban appeared
-  stopReason: z.enum(['EXITED', 'HOST_FAIL2BAN']).nullable(),
+  // or a trial start was not confirmed in time
+  stopReason: z.enum(['EXITED', 'HOST_FAIL2BAN', 'TRIAL_EXPIRED']).nullable(),
   lastError: z.string().nullable(),
   confDir: z.string(),
   // null until the first start
   firewall: embeddedFirewall.nullable(),
   // The instance row driving it, created on the first start
   hostId: z.number().nullable(),
+  // When an unconfirmed trial start stops on its own
+  trialUntil: z.string().nullable(),
+  // Public address of the admin who started it, never banned
+  trustedIp: z.string().nullable(),
+  machine: embeddedMachine,
+  // false: the container has its own network, bans would not protect the machine
+  hostNetwork: z.boolean(),
 });
 export type EmbeddedStatus = z.infer<typeof embeddedStatus>;
