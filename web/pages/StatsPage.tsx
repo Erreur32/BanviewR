@@ -1,75 +1,387 @@
 import { useQuery } from '@tanstack/react-query';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, type ReactNode, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BanStats } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
+import {
+  BarAxis,
+  type BarColumn,
+  BarList,
+  type Cell,
+  CellGrid,
+  Clock,
+  Donut,
+  jailColors,
+  Legend,
+  LineChart,
+  OTHER_COLOR,
+  ShareBar,
+  StackedBars,
+  Swatch,
+  sum,
+} from '../components/charts.tsx';
 import { HostSwitch } from '../components/HostSwitch.tsx';
 import { CountryLabel, IpOrigin } from '../components/IpOrigin.tsx';
-import { Card, ErrorText, SelectField, Table } from '../components/ui.tsx';
+import { Card, ErrorText, Segmented, SelectField, Table } from '../components/ui.tsx';
 import { errorText } from '../errors.ts';
-import { foldSlots } from '../stats.ts';
+import { usePersisted } from '../persisted.ts';
+import { addDays, calendarWeeks, foldSlots, localClock, weekdayOf } from '../stats.ts';
 import { IpLink } from './JailsPage.tsx';
 
 const PERIODS = [7, 30, 90, 365, 0];
+const YEAR = 365;
+// Past this many days, one column per week: daily columns would be thinner than a pixel
+const WEEKLY_AFTER = 120;
 // The server syncs fail2ban once a minute
 const REFRESH_MS = 60_000;
-const WIDTH = 720;
-const HEIGHT = 120;
-const TOP_COUNTRIES = 10;
-// Its outlines weigh about 40 KB compressed, only fetched when there are countries to show
+// Its outlines weigh about 40 KB compressed, only fetched when the map format is shown
 const WorldMap = lazy(() => import('../components/WorldMap.tsx'));
 
-type Bar = { key: string; label: string; bans: number };
+const TIME_FORMATS = ['bars', 'lines', 'table'] as const;
+const SHARE_FORMATS = ['bars', 'segment', 'donut', 'table'] as const;
+const WHEN_FORMATS = ['heat', 'clock', 'table'] as const;
+const WHERE_FORMATS = ['map', 'bars', 'table'] as const;
 
-// One series: the title names it, the line above the plot reads the hovered bar
-function BarChart({ title, bars, axis }: { title: string; bars: Bar[]; axis: [string, string] }) {
+const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
+const scroll = 'max-h-96 overflow-y-auto';
+
+// A chart with its format switch in the header, the choice remembered per chart
+function ChartCard<T extends string>({
+  chart,
+  title,
+  hint,
+  formats,
+  children,
+}: {
+  chart: string;
+  title: string;
+  hint?: string;
+  formats: readonly T[];
+  children: (format: T) => ReactNode;
+}) {
   const { t } = useTranslation();
-  const [hovered, setHovered] = useState<Bar | null>(null);
-  const max = Math.max(1, ...bars.map((b) => b.bans));
-  const step = WIDTH / Math.max(1, bars.length);
-  const gap = Math.min(2, step / 4);
-  const peak = bars.find((b) => b.bans === max);
+  const [format, setFormat] = usePersisted<T>(`bvr.stats.${chart}`, formats, formats[0] as T);
+  return (
+    <section className="min-w-0 rounded-md border border-border bg-bg1 p-5">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold">{title}</h2>
+          {hint && <p className="text-xs text-muted">{hint}</p>}
+        </div>
+        <Segmented
+          label={t('stats.formatLabel', { chart: title })}
+          options={formats.map((value) => ({ value, label: t(`stats.formats.${value}`) }))}
+          value={format}
+          onChange={setFormat}
+        />
+      </div>
+      {children(format)}
+    </section>
+  );
+}
+
+function useLabels() {
+  const { i18n } = useTranslation();
+  // Noon UTC with a UTC format: the date stays the one already folded
+  const dayFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' });
+  const weekdayFormat = new Intl.DateTimeFormat(i18n.language, { weekday: 'short', timeZone: 'UTC' });
+  return {
+    day: (date: string) => dayFormat.format(new Date(`${date}T12:00Z`)),
+    // 2024-01-01 is a Monday
+    weekday: (index: number) => weekdayFormat.format(new Date(Date.UTC(2024, 0, 1 + index, 12))),
+  };
+}
+
+// Jails past the palette share one gray series, named "other jails"
+function useSeries(stats: BanStats) {
+  const { t } = useTranslation();
+  const colorOf = jailColors(stats.slots.map((s) => s.jail));
+  const nameOf = (jail: string) => (colorOf(jail) === OTHER_COLOR ? t('stats.otherJails') : jail);
+  const totals = new Map<string, { color: string; value: number }>();
+  for (const row of stats.topJails) {
+    const name = nameOf(row.jail);
+    const entry = totals.get(name) ?? { color: colorOf(row.jail), value: 0 };
+    entry.value += row.bans;
+    totals.set(name, entry);
+  }
+  const parts = [...totals].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.value - a.value);
+  return { nameOf, colorOf, parts };
+}
+
+function OverTime({ stats, fold }: { stats: BanStats; fold: ReturnType<typeof foldSlots> }) {
+  const { t } = useTranslation();
+  const labels = useLabels();
+  const { nameOf, colorOf, parts } = useSeries(stats);
+  const weekly = fold.days.length > WEEKLY_AFTER;
+  const buckets = new Map<string, Map<string, number>>();
+  for (const { date } of fold.days) {
+    const key = weekly ? addDays(date, -weekdayOf(date)) : date;
+    const bucket = buckets.get(key) ?? new Map<string, number>();
+    for (const [jail, bans] of fold.jailDays.get(date) ?? []) {
+      bucket.set(nameOf(jail), (bucket.get(nameOf(jail)) ?? 0) + bans);
+    }
+    buckets.set(key, bucket);
+  }
+  const colorByName = new Map(parts.map((p) => [p.name, p.color]));
+  for (const s of stats.slots) if (!colorByName.has(nameOf(s.jail))) colorByName.set(nameOf(s.jail), colorOf(s.jail));
+  const names = [...colorByName.keys()];
+  const columns: BarColumn[] = [...buckets].map(([key, values]) => ({
+    key,
+    label: weekly ? t('stats.weekOf', { date: labels.day(key) }) : labels.day(key),
+    parts: names.map((name) => ({ name, value: values.get(name) ?? 0, color: colorByName.get(name) ?? OTHER_COLOR })),
+  }));
+  const axis = (
+    <BarAxis
+      labels={[columns[0], columns[Math.floor(columns.length / 2)], columns.at(-1)].map((c) =>
+        c ? labels.day(c.key) : '',
+      )}
+    />
+  );
+  const legend = <Legend items={names.map((name) => ({ name, color: colorByName.get(name) ?? OTHER_COLOR }))} />;
+  const title = t('stats.overTime');
 
   return (
-    <Card title={title}>
-      <p className="h-5 text-xs text-muted">
-        {hovered
-          ? t('stats.barValue', { label: hovered.label, count: hovered.bans })
-          : peak && t('stats.peak', { label: peak.label, count: peak.bans })}
-      </p>
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="mt-2 w-full"
-        role="img"
-        aria-label={peak ? `${title}. ${t('stats.peak', { label: peak.label, count: peak.bans })}` : title}
-        onMouseLeave={() => setHovered(null)}
-      >
-        <line x1={0} x2={WIDTH} y1={HEIGHT - 0.5} y2={HEIGHT - 0.5} className="stroke-border" />
-        {bars.map((bar, i) => {
-          const height = (bar.bans / max) * (HEIGHT - 1);
+    <ChartCard
+      chart="time"
+      title={title}
+      hint={t(weekly ? 'stats.perWeekByJail' : 'stats.perDayByJail')}
+      formats={TIME_FORMATS}
+    >
+      {(format) =>
+        format === 'table' ? (
+          <div className={scroll}>
+            <Table columns={[t(weekly ? 'stats.week' : 'stats.day'), ...names, t('stats.total')]}>
+              {[...columns].reverse().map((c) => (
+                <tr key={c.key}>
+                  <td className="whitespace-nowrap">{c.label}</td>
+                  {c.parts.map((p) => (
+                    <td key={p.name} className="font-mono text-muted">
+                      {p.value}
+                    </td>
+                  ))}
+                  <td className="font-mono">{sum(c.parts.map((p) => p.value))}</td>
+                </tr>
+              ))}
+            </Table>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {legend}
+            {format === 'lines' ? (
+              <LineChart columns={columns} label={title} axis={axis} />
+            ) : (
+              <StackedBars columns={columns} label={title} axis={axis} />
+            )}
+          </div>
+        )
+      }
+    </ChartCard>
+  );
+}
+
+function Share({ stats }: { stats: BanStats }) {
+  const { t, i18n } = useTranslation();
+  const { parts, colorOf } = useSeries(stats);
+  const total = sum(parts.map((p) => p.value));
+  const pct = (value: number) => (total ? Math.round((value / total) * 100) : 0);
+  return (
+    <ChartCard chart="share" title={t('stats.share')} formats={SHARE_FORMATS}>
+      {(format) => {
+        if (format === 'segment') return <ShareBar parts={parts} />;
+        if (format === 'donut')
           return (
-            // biome-ignore lint/a11y/noStaticElementInteractions: hover detail only, the peak and tables carry the data
-            <g key={bar.key} onMouseEnter={() => setHovered(bar)}>
-              <rect x={i * step} y={0} width={step} height={HEIGHT} fill="transparent" />
-              {bar.bans > 0 && (
-                <rect
-                  x={i * step + gap / 2}
-                  y={HEIGHT - 1 - height}
-                  width={step - gap}
-                  height={height}
-                  rx={Math.min(2, (step - gap) / 2)}
-                  className={hovered?.key === bar.key ? 'fill-text' : 'fill-accent'}
-                />
-              )}
-            </g>
+            <div className="flex flex-wrap items-center gap-6">
+              <Donut parts={parts}>
+                <span className="text-2xl font-semibold">{total.toLocaleString(i18n.language)}</span>
+                <span className="text-xs text-muted">{t('dashboard.bansUnit')}</span>
+              </Donut>
+              <Legend items={parts.map((p) => ({ name: `${p.name} (${pct(p.value)} %)`, color: p.color }))} />
+            </div>
           );
-        })}
-      </svg>
-      <p className="mt-1 flex justify-between text-xs text-muted">
-        <span>{axis[0]}</span>
-        <span>{axis[1]}</span>
-      </p>
+        if (format === 'table')
+          return (
+            <Table columns={[t('jails.jail'), t('jails.banned'), t('jails.failures'), t('stats.part')]}>
+              {stats.topJails.map((row) => (
+                <tr key={row.jail}>
+                  <td>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Swatch color={colorOf(row.jail)} />
+                      {row.jail}
+                    </span>
+                  </td>
+                  <td className="font-mono text-muted">{row.bans}</td>
+                  <td className="font-mono text-muted">{row.failures}</td>
+                  <td className="font-mono text-muted">{pct(row.bans)} %</td>
+                </tr>
+              ))}
+            </Table>
+          );
+        return (
+          <BarList
+            empty={t('stats.empty')}
+            rows={parts.map((p) => ({
+              key: p.name,
+              value: p.value,
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <Swatch color={p.color} />
+                  {p.name}
+                </span>
+              ),
+            }))}
+          />
+        );
+      }}
+    </ChartCard>
+  );
+}
+
+function When({ fold }: { fold: ReturnType<typeof foldSlots> }) {
+  const { t } = useTranslation();
+  const labels = useLabels();
+  const peak = fold.hours.reduce((best, h) => (h.bans > best.bans ? h : best), { hour: 0, bans: 0 });
+  const summary = t('stats.peak', { label: hourLabel(peak.hour), count: peak.bans });
+  const rows: Cell[][] = fold.week.map((hours, day) =>
+    hours.map((value, hour) => ({ key: `${day}-${hour}`, label: `${labels.weekday(day)} ${hourLabel(hour)}`, value })),
+  );
+  const hourTicks = (
+    <div className="grid min-w-max gap-0.5" style={{ gridTemplateColumns: '2.5rem repeat(24, minmax(10px, 1fr))' }}>
+      <span />
+      {fold.hours.map(({ hour }) => (
+        <span key={hour} className="font-mono text-[10px] text-muted">
+          {hour % 6 === 0 ? String(hour).padStart(2, '0') : ''}
+        </span>
+      ))}
+    </div>
+  );
+  return (
+    <ChartCard chart="when" title={t('stats.when')} hint={t('stats.whenHint')} formats={WHEN_FORMATS}>
+      {(format) => {
+        if (format === 'clock')
+          return (
+            <Clock
+              hours={fold.hours.map((h) => h.bans)}
+              summary={summary}
+              describe={(hour) => t('stats.barValue', { label: hourLabel(hour), count: fold.hours[hour]?.bans ?? 0 })}
+            />
+          );
+        if (format === 'table')
+          return (
+            <div className={scroll}>
+              <Table columns={[t('stats.hour'), ...fold.week.map((_, day) => labels.weekday(day)), t('stats.total')]}>
+                {fold.hours.map(({ hour, bans }) => (
+                  <tr key={hour}>
+                    <td className="font-mono">{hourLabel(hour)}</td>
+                    {fold.week.map((hours, day) => (
+                      <td key={labels.weekday(day)} className="font-mono text-muted">
+                        {hours[hour]}
+                      </td>
+                    ))}
+                    <td className="font-mono">{bans}</td>
+                  </tr>
+                ))}
+              </Table>
+            </div>
+          );
+        return (
+          <CellGrid
+            rows={rows}
+            rowLabels={fold.week.map((_, day) => labels.weekday(day))}
+            colLabels={hourTicks}
+            summary={summary}
+            describe={(cell) => t('stats.barValue', { label: cell.label, count: cell.value })}
+          />
+        );
+      }}
+    </ChartCard>
+  );
+}
+
+function Where({ stats }: { stats: BanStats }) {
+  const { t } = useTranslation();
+  const located = sum(stats.countries.map((c) => c.bans));
+  return (
+    <ChartCard chart="where" title={t('stats.where')} formats={WHERE_FORMATS}>
+      {(format) => {
+        if (stats.countries.length === 0) return <p className="text-sm text-muted">{t('stats.noGeo')}</p>;
+        if (format === 'bars')
+          return (
+            <BarList
+              empty={t('stats.noGeo')}
+              rows={stats.countries
+                .slice(0, 12)
+                .map((c) => ({ key: c.country, value: c.bans, label: <CountryLabel code={c.country} /> }))}
+            />
+          );
+        if (format === 'table')
+          return (
+            <div className={scroll}>
+              <Table columns={[t('geoip.country'), t('jails.banned'), t('stats.uniqueIps')]}>
+                {stats.countries.map((row) => (
+                  <tr key={row.country}>
+                    <td>
+                      <CountryLabel code={row.country} />
+                    </td>
+                    <td className="font-mono text-muted">{row.bans}</td>
+                    <td className="font-mono text-muted">{row.ips}</td>
+                  </tr>
+                ))}
+              </Table>
+            </div>
+          );
+        return (
+          <>
+            <Suspense fallback={<p className="text-sm text-muted">{t('common.loading')}</p>}>
+              <WorldMap countries={stats.countries} />
+            </Suspense>
+            {located < stats.totalBans && (
+              <p className="mt-2 text-xs text-muted">{t('stats.unlocated', { count: stats.totalBans - located })}</p>
+            )}
+          </>
+        );
+      }}
+    </ChartCard>
+  );
+}
+
+// Always the last twelve months, whatever the period above
+function Year({ hostId, days, current }: { hostId: number; days: number; current?: BanStats }) {
+  const { t } = useTranslation();
+  const { timezone } = useCurrentUser();
+  const labels = useLabels();
+  // shortcut: a second stats request when the period is not a year; add a per-day route if it weighs
+  const year = useQuery({
+    queryKey: ['hosts', hostId, 'stats', YEAR],
+    queryFn: () => api.get<{ stats: BanStats }>(`/hosts/${hostId}/stats?days=${YEAR}`),
+    refetchInterval: REFRESH_MS,
+    enabled: days !== YEAR,
+  });
+  const stats = days === YEAR ? current : year.data?.stats;
+  if (!stats) return null;
+  const fold = foldSlots(stats.slots, timezone);
+  const weeks = calendarWeeks(
+    new Map(fold.days.map((d) => [d.date, d.bans])),
+    localClock(timezone)(Date.now() / 1000).date,
+  );
+  const rows: Cell[][] = Array.from({ length: 7 }, (_, day) =>
+    weeks.map((week) => {
+      const cell = week[day];
+      return cell ? { key: cell.date, label: labels.day(cell.date), value: cell.bans } : null;
+    }),
+  );
+  const peak = fold.days.reduce((best, d) => (d.bans > best.bans ? d : best), { date: '', bans: 0 });
+  const summary = peak.bans
+    ? `${t('stats.yearTotal', { count: stats.totalBans })} ${t('stats.peak', { label: labels.day(peak.date), count: peak.bans })}`
+    : t('stats.yearTotal', { count: 0 });
+  return (
+    <Card title={t('stats.year')}>
+      <CellGrid
+        rows={rows}
+        rowLabels={rows.map((_, day) => (day % 2 === 0 ? labels.weekday(day) : ''))}
+        summary={summary}
+        describe={(cell) => t('stats.barValue', { label: cell.label, count: cell.value })}
+      />
     </Card>
   );
 }
@@ -84,54 +396,9 @@ function Tile({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Charts({ stats }: { stats: BanStats }) {
-  const { t, i18n } = useTranslation();
-  const { timezone } = useCurrentUser();
-  const { days, hours } = foldSlots(stats.slots, timezone);
-  // Noon UTC with a UTC format: the date stays the one already folded
-  const dayFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' });
-  const formatDay = (date: string) => dayFormat.format(new Date(`${date}T12:00Z`));
-  const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
-
-  return (
-    <>
-      <BarChart
-        title={t('stats.perDay')}
-        bars={days.map((d) => ({ key: d.date, label: formatDay(d.date), bans: d.bans }))}
-        axis={[formatDay(days[0]?.date ?? ''), formatDay(days.at(-1)?.date ?? '')]}
-      />
-      <BarChart
-        title={t('stats.perHour')}
-        bars={hours.map((h) => ({ key: String(h.hour), label: hourLabel(h.hour), bans: h.bans }))}
-        axis={[hourLabel(0), hourLabel(23)]}
-      />
-    </>
-  );
-}
-
-function MapCard({ stats }: { stats: BanStats }) {
-  const { t } = useTranslation();
-  const located = stats.countries.reduce((sum, c) => sum + c.bans, 0);
-  return (
-    <Card title={t('stats.map')}>
-      {stats.countries.length === 0 ? (
-        <p className="text-sm text-muted">{t('stats.noGeo')}</p>
-      ) : (
-        <>
-          <Suspense fallback={<p className="text-sm text-muted">{t('common.loading')}</p>}>
-            <WorldMap countries={stats.countries} />
-          </Suspense>
-          {located < stats.totalBans && (
-            <p className="mt-2 text-xs text-muted">{t('stats.unlocated', { count: stats.totalBans - located })}</p>
-          )}
-        </>
-      )}
-    </Card>
-  );
-}
-
 function HostStats({ hostId }: { hostId: number }) {
   const { t } = useTranslation();
+  const { timezone } = useCurrentUser();
   const [days, setDays] = useState(30);
   const stats = useQuery({
     queryKey: ['hosts', hostId, 'stats', days],
@@ -139,6 +406,7 @@ function HostStats({ hostId }: { hostId: number }) {
     refetchInterval: REFRESH_MS,
   });
   const data = stats.data?.stats;
+  const fold = data && foldSlots(data.slots, timezone);
 
   return (
     <>
@@ -154,16 +422,23 @@ function HostStats({ hostId }: { hostId: number }) {
       <ErrorText>{stats.error && errorText(t, stats.error)}</ErrorText>
       {stats.isPending && <p className="text-muted">{t('common.loading')}</p>}
       {data &&
+        fold &&
         (data.totalBans === 0 ? (
           <p className="text-sm text-muted">{t('stats.empty')}</p>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <Tile label={t('stats.totalBans')} value={data.totalBans} />
               <Tile label={t('stats.uniqueIps')} value={data.uniqueIps} />
+              <Tile label={t('stats.jailsSeen')} value={new Set(data.slots.map((s) => s.jail)).size} />
             </div>
-            <Charts stats={data} />
-            <MapCard stats={data} />
+            <OverTime stats={data} fold={fold} />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Share stats={data} />
+              <When fold={fold} />
+            </div>
+            <Where stats={data} />
+            <Year hostId={hostId} days={days} current={data} />
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="min-w-0 space-y-2">
                 <h2 className="text-base font-semibold">{t('stats.topIps')}</h2>
@@ -181,34 +456,12 @@ function HostStats({ hostId }: { hostId: number }) {
                   ))}
                 </Table>
               </div>
-              <div className="min-w-0 space-y-2">
-                <h2 className="text-base font-semibold">{t('stats.topJails')}</h2>
-                <Table columns={[t('jails.jail'), t('jails.banned'), t('jails.failures')]}>
-                  {data.topJails.map((row) => (
-                    <tr key={row.jail}>
-                      <td>{row.jail}</td>
-                      <td className="text-muted">{row.bans}</td>
-                      <td className="text-muted">{row.failures}</td>
-                    </tr>
-                  ))}
-                </Table>
-              </div>
-              {data.countries.length > 0 && (
-                <div className="min-w-0 space-y-2">
-                  <h2 className="text-base font-semibold">{t('stats.topCountries')}</h2>
-                  <Table columns={[t('geoip.country'), t('jails.banned'), t('stats.uniqueIps')]}>
-                    {data.countries.slice(0, TOP_COUNTRIES).map((row) => (
-                      <tr key={row.country}>
-                        <td>
-                          <CountryLabel code={row.country} />
-                        </td>
-                        <td className="text-muted">{row.bans}</td>
-                        <td className="text-muted">{row.ips}</td>
-                      </tr>
-                    ))}
-                  </Table>
-                </div>
-              )}
+              <Card title={t('stats.orgs')}>
+                <BarList
+                  empty={t('stats.noOrgs')}
+                  rows={data.orgs.map((o) => ({ key: o.org, value: o.bans, label: o.org }))}
+                />
+              </Card>
             </div>
           </>
         ))}
@@ -219,7 +472,7 @@ function HostStats({ hostId }: { hostId: number }) {
 export function StatsPage() {
   const { t } = useTranslation();
   return (
-    <div className="max-w-5xl space-y-4">
+    <div className="max-w-6xl space-y-4">
       <h1 className="text-xl font-semibold">{t('stats.title')}</h1>
       <p className="text-sm text-muted">{t('stats.intro')}</p>
       <HostSwitch>{(hostId) => <HostStats key={hostId} hostId={hostId} />}</HostSwitch>

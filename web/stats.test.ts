@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldSlots } from './stats.ts';
+import { calendarWeeks, foldSlots } from './stats.ts';
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 
@@ -42,5 +42,31 @@ describe('foldSlots', () => {
     const { days, hours } = foldSlots([], 'UTC');
     expect(days).toEqual([]);
     expect(hours).toHaveLength(24);
+  });
+});
+
+describe('jails, week and year', () => {
+  it('splits days per jail and lays bans on the week', () => {
+    // 2026-03-02 is a Monday
+    const { jailDays, week } = foldSlots(
+      [
+        { at: at('2026-03-02T03:00:00Z'), jail: 'sshd', bans: 2 },
+        { at: at('2026-03-02T03:00:00Z'), jail: 'recidive', bans: 1 },
+        { at: at('2026-03-08T22:00:00Z'), jail: 'sshd', bans: 5 },
+      ],
+      'UTC',
+    );
+    expect(Object.fromEntries(jailDays.get('2026-03-02') ?? [])).toEqual({ sshd: 2, recidive: 1 });
+    expect(week[0]?.[3]).toBe(3);
+    expect(week[6]?.[22]).toBe(5);
+  });
+
+  it('draws 53 weeks from a Monday, nothing after today', () => {
+    const weeks = calendarWeeks(new Map([['2026-11-05', 4]]), '2026-11-05');
+    expect(weeks).toHaveLength(53);
+    expect(weeks[0]?.[0]?.date).toBe('2025-11-03');
+    const last = weeks.at(-1) ?? [];
+    expect(last[3]).toEqual({ date: '2026-11-05', bans: 4 });
+    expect(last[4]).toBeNull();
   });
 });

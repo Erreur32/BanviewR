@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { HealthResult } from '../../shared/api.ts';
 import type { BanStats, JailRow, LocatedBan, ThreatRow } from '../../shared/fail2ban.ts';
@@ -35,6 +35,7 @@ import {
 } from '../dashboard.ts';
 import { errorText } from '../errors.ts';
 import { hostsQuery } from '../hosts.ts';
+import { usePersisted } from '../persisted.ts';
 import { bansKey, formatDuration, IpLink } from './JailsPage.tsx';
 
 const REFRESH_MS = 60_000;
@@ -43,25 +44,8 @@ const MODE_KEY = 'bvr.dashboardMode';
 
 type Mode = 'simple' | 'full';
 
-// shortcut: remembered per browser, not per account; move to the user preferences if people ask
-function useMode() {
-  const [mode, setMode] = useState<Mode>(() => {
-    try {
-      return localStorage.getItem(MODE_KEY) === 'full' ? 'full' : 'simple';
-    } catch {
-      return 'simple';
-    }
-  });
-  const change = (next: Mode) => {
-    setMode(next);
-    try {
-      localStorage.setItem(MODE_KEY, next);
-    } catch {
-      // Private window: the choice lasts for this page only
-    }
-  };
-  return [mode, change] as const;
-}
+const MODES = ['simple', 'full'] as const;
+const useMode = () => usePersisted<Mode>(MODE_KEY, MODES, 'simple');
 
 function formatUptime(seconds: number) {
   const h = Math.floor(seconds / 3600);

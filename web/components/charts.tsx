@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 // Hand-written charts, no chart library. Jail colors checked with a palette validator against bg1
 // (#161b22): lightness band, chroma, color-blind separation, contrast.
@@ -36,6 +36,35 @@ export function Legend({ items }: { items: { name: string; color: string }[] }) 
         </li>
       ))}
     </ul>
+  );
+}
+
+type Part = { name: string; value: number; color: string };
+
+// Hover detail of one column or one point: a line per series, then the total
+function ChartTooltip({ left, title, parts }: { left: number; title: string; parts: Part[] }) {
+  return (
+    <div
+      className="pointer-events-none absolute top-0 z-10 min-w-40 rounded-md border border-border bg-bg2 px-3 py-2 text-xs shadow-lg"
+      style={{ left: `${left}%`, transform: `translateX(${left > 70 ? '-100%' : left < 30 ? '0' : '-50%'})` }}
+    >
+      <p className="mb-1 font-semibold">{title}</p>
+      {parts
+        .filter((p) => p.value > 0)
+        .map((part) => (
+          <p key={part.name} className="flex items-center justify-between gap-3 text-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <Swatch color={part.color} />
+              {part.name}
+            </span>
+            <span className="font-mono text-text">{part.value}</span>
+          </p>
+        ))}
+      <p className="mt-1 flex justify-between border-border border-t pt-1">
+        <span>Total</span>
+        <span className="font-mono font-semibold">{sum(parts.map((p) => p.value))}</span>
+      </p>
+    </div>
   );
 }
 
@@ -88,29 +117,7 @@ export function StackedBars({
         })}
       </div>
       {axis}
-      {shown && (
-        <div
-          className="pointer-events-none absolute top-0 z-10 min-w-40 rounded-md border border-border bg-bg2 px-3 py-2 text-xs shadow-lg"
-          style={{ left: `${left}%`, transform: `translateX(${left > 70 ? '-100%' : left < 30 ? '0' : '-50%'})` }}
-        >
-          <p className="mb-1 font-semibold">{shown.label}</p>
-          {shown.parts
-            .filter((p) => p.value > 0)
-            .map((part) => (
-              <p key={part.name} className="flex items-center justify-between gap-3 text-muted">
-                <span className="inline-flex items-center gap-1.5">
-                  <Swatch color={part.color} />
-                  {part.name}
-                </span>
-                <span className="font-mono text-text">{part.value}</span>
-              </p>
-            ))}
-          <p className="mt-1 flex justify-between border-border border-t pt-1">
-            <span>Total</span>
-            <span className="font-mono font-semibold">{sum(shown.parts.map((p) => p.value))}</span>
-          </p>
-        </div>
-      )}
+      {shown && <ChartTooltip left={left} title={shown.label} parts={shown.parts} />}
     </figure>
   );
 }
@@ -239,5 +246,259 @@ export function Spark({
         />
       ))}
     </div>
+  );
+}
+
+// One line per series over the same columns as StackedBars, crosshair and tooltip on hover or focus
+export function LineChart({
+  columns,
+  height = 160,
+  label,
+  axis,
+}: {
+  columns: BarColumn[];
+  height?: number;
+  label: string;
+  axis?: ReactNode;
+}) {
+  const [active, setActive] = useState<number | null>(null);
+  const names = [...new Map(columns.flatMap((c) => c.parts.map((p) => [p.name, p.color] as const))).entries()];
+  const max = Math.max(1, ...columns.flatMap((c) => c.parts.map((p) => p.value)));
+  const x = (i: number) => ((i + 0.5) / columns.length) * 100;
+  const y = (value: number) => 100 - (value / max) * 98;
+  const partValue = (column: BarColumn, name: string) => column.parts.find((p) => p.name === name)?.value ?? 0;
+  const shown = active === null ? undefined : columns[active];
+
+  return (
+    <figure className="relative m-0">
+      <figcaption className="sr-only">{label}</figcaption>
+      <div className="relative border-border border-b" style={{ height }}>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full" aria-hidden="true">
+          {active !== null && (
+            <line
+              x1={x(active)}
+              x2={x(active)}
+              y1={0}
+              y2={100}
+              className="stroke-border"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {names.map(([name, color]) => (
+            <polyline
+              key={name}
+              fill="none"
+              stroke={color}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              points={columns.map((c, i) => `${x(i)},${y(partValue(c, name))}`).join(' ')}
+            />
+          ))}
+        </svg>
+        <div className="absolute inset-0 flex">
+          {columns.map((column, i) => (
+            <button
+              type="button"
+              key={column.key}
+              aria-label={`${column.label}: ${sum(column.parts.map((p) => p.value))}`}
+              className="h-full min-w-0 flex-1 cursor-default"
+              onMouseEnter={() => setActive(i)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(i)}
+              onBlur={() => setActive(null)}
+            />
+          ))}
+        </div>
+      </div>
+      {axis}
+      {shown && active !== null && <ChartTooltip left={x(active)} title={shown.label} parts={shown.parts} />}
+    </figure>
+  );
+}
+
+// Parts of a whole on one bar, surface gaps between them, names and shares below
+export function ShareBar({ parts }: { parts: Part[] }) {
+  const total = sum(parts.map((p) => p.value));
+  const pct = (value: number) => (total ? Math.round((value / total) * 100) : 0);
+  return (
+    <div>
+      <div className="flex h-6 gap-0.5 overflow-hidden rounded">
+        {parts.map((part) => (
+          <span
+            key={part.name}
+            title={`${part.name}: ${part.value}`}
+            style={{ width: `${(part.value / Math.max(1, total)) * 100}%`, background: part.color }}
+          />
+        ))}
+      </div>
+      <ul className="mt-3 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+        {parts.map((part) => (
+          <li key={part.name} className="flex items-center justify-between gap-3">
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-muted">
+              <Swatch color={part.color} />
+              <span className="truncate">{part.name}</span>
+            </span>
+            <span className="font-mono">
+              {part.value} <span className="text-muted">({pct(part.value)} %)</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// One hue, darkest for the fewest bans: on a dark surface magnitude reads as brightness
+export const SEQ_RAMP = ['#0d419d', '#1158c7', '#1f6feb', '#58a6ff', '#a5d6ff'];
+export const SEQ_EMPTY = '#21262d';
+export const seqColor = (value: number, max: number) =>
+  value <= 0
+    ? SEQ_EMPTY
+    : (SEQ_RAMP[Math.min(SEQ_RAMP.length - 1, Math.ceil((value / Math.max(1, max)) * SEQ_RAMP.length) - 1)] ??
+      SEQ_EMPTY);
+
+export type Cell = { key: string; label: string; value: number } | null;
+
+// Rows of colored cells (week x hour, a year of days). The line above reads the hovered cell;
+// the table format of each chart carries the same numbers for keyboard and screen readers.
+export function CellGrid({
+  rows,
+  rowLabels,
+  colLabels,
+  describe,
+  summary,
+}: {
+  rows: Cell[][];
+  rowLabels: string[];
+  colLabels?: ReactNode;
+  describe: (cell: NonNullable<Cell>) => string;
+  summary: string;
+}) {
+  const [hovered, setHovered] = useState<NonNullable<Cell> | null>(null);
+  const max = Math.max(1, ...rows.flat().map((c) => c?.value ?? 0));
+  const cols = Math.max(...rows.map((r) => r.length));
+  // Wide grids open on their most recent end on small screens
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth;
+  }, []);
+  return (
+    <figure className="m-0">
+      <p className="h-5 text-xs text-muted">{hovered ? describe(hovered) : summary}</p>
+      <div ref={scroller} className="mt-1 overflow-x-auto">
+        <div
+          role="img"
+          aria-label={summary}
+          className="grid min-w-max gap-0.5"
+          style={{ gridTemplateColumns: `2.5rem repeat(${cols}, minmax(10px, 1fr))` }}
+          onMouseLeave={() => setHovered(null)}
+        >
+          {rows.map((row, r) => [
+            <span
+              key={`label-${rowLabels[r]}`}
+              className="pr-1 text-right font-mono text-[10px] leading-[14px] text-muted"
+            >
+              {rowLabels[r]}
+            </span>,
+            ...row.map((cell, c) =>
+              cell ? (
+                // biome-ignore lint/a11y/noStaticElementInteractions: hover detail only, the table format carries the data
+                <span
+                  key={cell.key}
+                  className={`h-3.5 rounded-[2px] ${hovered?.key === cell.key ? 'outline outline-1 outline-text' : ''}`}
+                  style={{ background: seqColor(cell.value, max) }}
+                  onMouseEnter={() => setHovered(cell)}
+                />
+              ) : (
+                // biome-ignore lint/suspicious/noArrayIndexKey: empty cells have no identity
+                <span key={`empty-${r}-${c}`} />
+              ),
+            ),
+          ])}
+        </div>
+        {colLabels}
+      </div>
+      <p className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted">
+        <span>0</span>
+        {SEQ_RAMP.map((color) => (
+          <span key={color} className="size-2.5 rounded-[2px]" style={{ background: color }} />
+        ))}
+        <span>{max}</span>
+      </p>
+    </figure>
+  );
+}
+
+// 24 hours around a dial, midnight on top, bar length for the bans of that hour
+export function Clock({
+  hours,
+  describe,
+  summary,
+  size = 220,
+}: {
+  hours: number[];
+  describe: (hour: number) => string;
+  summary: string;
+  size?: number;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const max = Math.max(1, ...hours);
+  const [inner, outer] = [28, 48];
+  const point = (hour: number, r: number) => {
+    const angle = ((hour + 0.5) / 24) * 2 * Math.PI - Math.PI / 2;
+    return [50 + r * Math.cos(angle), 50 + r * Math.sin(angle)];
+  };
+  return (
+    <figure className="m-0">
+      <p className="h-5 text-xs text-muted">{hovered === null ? summary : describe(hovered)}</p>
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        className="mx-auto mt-1 block"
+        role="img"
+        aria-label={summary}
+        onMouseLeave={() => setHovered(null)}
+      >
+        <circle cx={50} cy={50} r={inner - 2} className="fill-none stroke-border" strokeWidth={0.5} />
+        {hours.map((bans, hour) => {
+          const [x1, y1] = point(hour, inner);
+          const [x2, y2] = point(hour, inner + Math.max(0.8, (bans / max) * (outer - inner)));
+          const [hx, hy] = point(hour, outer);
+          return (
+            // biome-ignore lint/a11y/noStaticElementInteractions: hover detail only, the table format carries the data
+            // biome-ignore lint/suspicious/noArrayIndexKey: the index is the hour
+            <g key={hour} onMouseEnter={() => setHovered(hour)}>
+              <line x1={x1} y1={y1} x2={hx} y2={hy} stroke="transparent" strokeWidth={8} />
+              <line
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                strokeWidth={4}
+                strokeLinecap="round"
+                className={hovered === hour ? 'stroke-text' : 'stroke-accent'}
+              />
+            </g>
+          );
+        })}
+        {[0, 6, 12, 18].map((hour) => {
+          const angle = (hour / 24) * 2 * Math.PI - Math.PI / 2;
+          return (
+            <text
+              key={hour}
+              x={50 + (inner - 7) * Math.cos(angle)}
+              y={50 + (inner - 7) * Math.sin(angle) + 1.5}
+              textAnchor="middle"
+              className="fill-muted font-mono"
+              fontSize={4.5}
+            >
+              {String(hour).padStart(2, '0')}
+            </text>
+          );
+        })}
+      </svg>
+    </figure>
   );
 }
