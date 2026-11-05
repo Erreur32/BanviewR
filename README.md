@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.1.1-111827?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.2.0-111827?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
@@ -38,18 +38,21 @@ BanviewR drives the firewall of the machines it manages. Every design choice fol
 
 ## Status
 
-v0.1: instances, jails, ban and unban, history and stats, map, notifications, firewall audit, blocklists, MCP and Docker work.
+v0.2: everything from v0.1 (instances, jails, ban and unban, history, map, notifications, firewall audit, blocklists, MCP, Docker) plus the embedded mode for machines without fail2ban, and new monitoring pages.
 BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.16.0, where the fail2ban part lives today.
 
-## Features (target for v0.1)
+## Features
 
+- Dashboard in two modes: simple (a few big figures, alerts, health) or full (trends, threat levels, charts per jail, top addresses, countries and operators)
+- Statistics: bans over time per jail, share of each jail, when the attacks hit (heatmap, 24 h clock), where they come from (map), a year day by day; every chart can switch format (bars, lines, donut, table...)
+- Addresses: the ones that came back, ranked from low to critical, with first and last ban
+- Live: running bans every 5 seconds, bans per minute over the last hour
 - Jails: list, status, start/stop, configuration
-- Bans: current and historical bans, manual ban/unban, IP lookup and map
-- Stats: ban history synced from `fail2ban.sqlite3`
+- Bans: current and historical bans, manual ban/unban, address page with local GeoIP
 - Firewall audit: iptables, ipset and nftables rules set by fail2ban
-- Notifications: webhooks and MQTT
-- MCP server: fail2ban tools for AI agents
-- Multi-user auth with brute force protection, English and French UI
+- Blocklists, notifications (webhook, Discord, Telegram, MQTT), MCP server for AI agents
+- Embedded mode: BanviewR runs its own fail2ban where none is installed, in the host firewall and Docker's `DOCKER-USER`
+- Multi-user auth with brute force protection, API tokens, audit log, English and French UI
 
 ## Roadmap
 
