@@ -47,7 +47,7 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 ## Roadmap
 
 - **v0.1, extraction:** port the fail2ban part of LogviewR, external mode (host fail2ban through its socket and `fail2ban.sqlite3`)
-- **v0.2, embedded mode:** the container runs `fail2ban-server` itself when no host socket is found
+- **v0.2, embedded mode:** the container runs `fail2ban-server` itself when no host socket is found. In progress: start, stop and status from the Instances page, behind the `EMBEDDED_ALLOWED` lock; host firewall and `DOCKER-USER` support come next
 - **Later, multi-host:** one UI driving several hosts
 
 ## Stack
@@ -74,7 +74,7 @@ Each release `vX.Y.Z` publishes the image for amd64 and arm64, tagged `X.Y.Z`, `
 
 Then open `http://127.0.0.1:3025` on that machine and create the first admin account. The container uses the host network and listens on `127.0.0.1` only: put a reverse proxy with HTTPS in front of it to reach it from elsewhere, or set `HOST` in `docker-compose.yml` at your own risk. Data (database, GeoIP files) lives in `./data`.
 
-The container runs as root, because fail2ban's socket is root-only. It never starts a fail2ban server of its own.
+The container runs as root, because fail2ban's socket is root-only. Without `EMBEDDED_ALLOWED=true` it never starts a fail2ban server of its own.
 
 The firewall audit reads the host firewall (`iptables-save`, `ipset list`, `nft list ruleset`), which needs the `NET_ADMIN` capability set in `docker-compose.yml`. That capability would also let the container change the host firewall; access to fail2ban's socket already allows as much, since fail2ban runs its actions as root. Blocklists use the same capability to write their ipset and iptables DROP rule on the host. Remove `cap_add` to drop the audit and blocklists, the rest keeps working.
 
@@ -105,8 +105,24 @@ The web dev server proxies `/api` to the server, so only port 5185 needs to be r
 | `F2B_SOCKET`       | `/var/run/fail2ban/fail2ban.sock`    | Local fail2ban socket, seeds the first host                    |
 | `F2B_DB`           | `/var/lib/fail2ban/fail2ban.sqlite3` | Local fail2ban database, seeds the first host                  |
 | `F2B_CONF`         | `/etc/fail2ban`                      | Local fail2ban configuration folder, seeds the first host      |
+| `F2B_CLIENT`       | `fail2ban-client`                    | Client command used to reach every instance                    |
+| `EMBEDDED_ALLOWED` | `false`                              | Allows the embedded fail2ban (only ever inside a container)    |
 | `MCP_WRITE`        | `false`                              | Shows the MCP write tools (ban, unban, jail actions)           |
 | `BAN_HISTORY_DAYS` | `365`                                | Days of ban history kept, `0` keeps it forever                 |
+
+### Embedded mode in development
+
+The embedded fail2ban only starts inside a container (`/.dockerenv`) with `EMBEDDED_ALLOWED=true`, and never next to a host fail2ban. Never run fail2ban on the development machine itself: use the dev container, which has its own network namespace (`NET_ADMIN` and `NET_RAW`, no host network), so its bans and firewall rules stay inside it.
+
+```bash
+npm run dev:embedded -- start   # BanviewR from this checkout, embedded mode allowed, on 127.0.0.1:3027
+npm run dev:embedded -- logs
+npm run dev:embedded -- stop    # removes the container, data-dev/ is kept
+```
+
+Its config and fail2ban database live in `data-dev/fail2ban/`, mounted at the same path inside the container. Start the embedded fail2ban from the Instances page or with `POST /api/embedded/start`; a `manual` jail is added for ban tests. The page served on 3027 is the image's build: for the current UI, run `PORT=3027 VITE_PORT=5186 npx vite`.
+
+The development machine has no `fail2ban-client`. A dev server on the host can still drive that fail2ban with `F2B_CLIENT=./scripts/dev-f2b-client.sh`, which runs the container's client through `docker exec`, and `F2B_SOCKET`, `F2B_DB`, `F2B_CONF` pointing into `data-dev/fail2ban/`.
 
 Other commands:
 

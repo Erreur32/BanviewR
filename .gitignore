@@ -55,6 +55,7 @@ test-backend.sh
 # Database files (contains sensitive data)
 data/
 data-test/
+data-dev/
 *.db
 *.db-shm
 *.db-wal

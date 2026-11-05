@@ -171,7 +171,7 @@
       "socket": "The fail2ban socket answers: BanviewR uses the host's fail2ban.",
       "process": "A fail2ban-server process is running: BanviewR uses the host's fail2ban.",
       "service": "The fail2ban service is installed: BanviewR uses the host's fail2ban.",
-      "none": "No fail2ban found when the server started. Embedded mode comes in v0.2."
+      "none": "No fail2ban found when the server started: the embedded fail2ban can be started below."
     },
     "name": "Name",
     "status": "Status",
@@ -193,7 +193,26 @@
     "conflict": "This name or socket is already used by another instance.",
     "lastInstance": "The last instance cannot be removed.",
     "confPath": "Configuration folder",
-    "confHint": "Absolute path, for example /etc/fail2ban."
+    "confHint": "Absolute path, for example /etc/fail2ban.",
+    "embedded": {
+      "title": "Embedded fail2ban",
+      "intro": "BanviewR runs fail2ban itself, inside its container, when the machine has none. Loopback, private ranges and Docker networks are never banned. Add your jails as .local files in",
+      "running": "Running, pid {{pid}}",
+      "stopped": "Stopped",
+      "start": "Start",
+      "stop": "Stop",
+      "startDone": "Embedded fail2ban started.",
+      "stopDone": "Embedded fail2ban stopped.",
+      "blocked": {
+        "NOT_CONTAINER": "Not available: BanviewR does not run in a container.",
+        "NOT_ALLOWED": "Not available: set EMBEDDED_ALLOWED=true in the container environment to allow it.",
+        "HOST_FAIL2BAN": "Not available: a fail2ban is already installed on the machine, BanviewR uses it."
+      },
+      "stopReason": {
+        "EXITED": "fail2ban-server stopped on its own.",
+        "HOST_FAIL2BAN": "Stopped because a fail2ban appeared on the machine: never both at once."
+      }
+    }
   },
   "jails": {
     "title": "Jails",

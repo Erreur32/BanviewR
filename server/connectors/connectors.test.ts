@@ -108,6 +108,15 @@ describe('detectLocalFail2ban', () => {
     });
   });
 
+  it('does not count the embedded server it was told about', async () => {
+    const procDir = fakeProc({ 12: ['/usr/bin/fail2ban-server', '-f', '-x'] });
+    const opts = { procDir, systemctl: noService() };
+    expect(await detectLocalFail2ban(join(dir, 'x'), { ...opts, ignorePids: [12] })).toMatchObject({ reason: 'none' });
+    expect(await detectLocalFail2ban(join(dir, 'x'), { ...opts, ignorePids: [13] })).toMatchObject({
+      reason: 'process',
+    });
+  });
+
   it('counts a stopped but installed service', async () => {
     const systemctl = script('systemctl', 'echo loaded');
     expect(await detectLocalFail2ban(join(dir, 'x'), { procDir: fakeProc({}), systemctl })).toEqual({

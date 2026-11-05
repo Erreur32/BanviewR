@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { HealthResult } from '../../shared/api.ts';
-import type { HostRow } from '../../shared/hosts.ts';
+import type { EmbeddedStatus, HostRow } from '../../shared/hosts.ts';
 import { api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
 import { Badge, Button, Card, ConfirmButton, ErrorText, Table, TextField } from '../components/ui.tsx';
@@ -21,6 +21,71 @@ function DetectionCard() {
         <Badge tone={detection.mode === 'external' ? 'ok' : 'neutral'}>{t(`instances.mode.${detection.mode}`)}</Badge>{' '}
         {t(`instances.reason.${detection.reason}`)}
       </p>
+    </Card>
+  );
+}
+
+// Admins only: the routes refuse everyone else
+function EmbeddedCard() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['embedded'], queryFn: () => api.get<{ embedded: EmbeddedStatus }>('/embedded') });
+  const change = useMutation({
+    mutationFn: (action: 'start' | 'stop') => api.post<{ embedded: EmbeddedStatus }>(`/embedded/${action}`),
+    onSuccess: (data, action) => {
+      queryClient.setQueryData(['embedded'], data);
+      queryClient.invalidateQueries({ queryKey: hostsQuery.queryKey });
+      notify('success', t(action === 'start' ? 'instances.embedded.startDone' : 'instances.embedded.stopDone'));
+    },
+    onError: (err: Error) => {
+      queryClient.invalidateQueries({ queryKey: ['embedded'] });
+      notify('error', errorText(t, err));
+    },
+  });
+  const embedded = query.data?.embedded;
+
+  return (
+    <Card title={t('instances.embedded.title')}>
+      <ErrorText>{query.error && errorText(t, query.error)}</ErrorText>
+      {embedded && (
+        <div className="space-y-2 text-sm">
+          <p>
+            {embedded.running ? (
+              <Badge tone="ok">{t('instances.embedded.running', { pid: embedded.pid })}</Badge>
+            ) : (
+              <Badge>{t('instances.embedded.stopped')}</Badge>
+            )}{' '}
+            {embedded.blockedBy && t(`instances.embedded.blocked.${embedded.blockedBy}`)}
+          </p>
+          {embedded.stopReason && (
+            <p className="text-danger">
+              {t(`instances.embedded.stopReason.${embedded.stopReason}`)}
+              {embedded.lastError && <span className="block font-mono text-xs">{embedded.lastError}</span>}
+            </p>
+          )}
+          <p className="text-muted">
+            {t('instances.embedded.intro')} <span className="font-mono text-xs">{embedded.confDir}/jail.d/</span>
+          </p>
+          {embedded.running ? (
+            <ConfirmButton
+              size="sm"
+              confirmLabel={t('common.confirm')}
+              onConfirm={() => change.mutate('stop')}
+              disabled={change.isPending}
+            >
+              {t('instances.embedded.stop')}
+            </ConfirmButton>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => change.mutate('start')}
+              disabled={change.isPending || !!embedded.blockedBy}
+            >
+              {t('instances.embedded.start')}
+            </Button>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
@@ -186,6 +251,7 @@ export function InstancesPage() {
       </div>
       <p className="text-sm text-muted">{t('instances.intro')}</p>
       <DetectionCard />
+      {isAdmin && <EmbeddedCard />}
       <ErrorText>{hosts.error && errorText(t, hosts.error)}</ErrorText>
       {hosts.isPending && <p className="text-muted">{t('common.loading')}</p>}
       {hosts.data && (

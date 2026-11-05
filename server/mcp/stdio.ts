@@ -31,7 +31,7 @@ function caller(): { principal: Principal; ip: string } {
 try {
   const server = buildMcpServer({
     db,
-    connect: localConnector,
+    connect: (host) => localConnector(host, config.f2bClient),
     writeEnabled: config.mcpWrite,
     locate: openGeoIp(join(config.dataDir, 'geoip')).locate,
     caller,
