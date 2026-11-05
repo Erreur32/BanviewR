@@ -14,6 +14,7 @@
 
 > [!WARNING]
 > ## 🚧 BETA, in active development
+>
 > BanviewR is young and changes fast: features, screens and the API can still change between versions, and bugs are expected.
 > It drives your firewall: try it on a test machine first, keep your own way into the server (console, out-of-band access), and read the [CHANGELOG](CHANGELOG.md) before each upgrade.
 > Feedback and bug reports are welcome in [Issues](https://github.com/Erreur32/BanviewR/issues) and [Discussions](https://github.com/Erreur32/BanviewR/discussions).
