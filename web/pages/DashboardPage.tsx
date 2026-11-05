@@ -51,7 +51,15 @@ function HostBadge({ host }: { host: HostRow }) {
   if (status.reachable) return <Badge tone="ok">{t('dashboard.connected', { version: status.version ?? '?' })}</Badge>;
   if (status.error === 'NO_SOCKET') return <Badge>{t('dashboard.historyOnly')}</Badge>;
   return (
-    <Badge tone="danger">{t(status.error === 'CLIENT_MISSING' ? 'dashboard.clientMissing' : 'dashboard.down')}</Badge>
+    <Badge tone="danger">
+      {t(
+        status.error === 'CLIENT_MISSING'
+          ? 'dashboard.clientMissing'
+          : status.error === 'AGENT_OFFLINE'
+            ? 'dashboard.agentOffline'
+            : 'dashboard.down',
+      )}
+    </Badge>
   );
 }
 

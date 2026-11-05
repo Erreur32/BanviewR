@@ -135,7 +135,8 @@
       "topCountry": "Top country:",
       "noJails": "fail2ban does not answer: jails unknown for now."
     },
-    "historyOnly": "history only, no socket"
+    "historyOnly": "history only, no socket",
+    "agentOffline": "agent offline"
   },
   "prefs": {
     "title": "Preferences",
@@ -277,7 +278,8 @@
     "error": {
       "UNREACHABLE": "Unreachable (socket access refused or fail2ban stopped)",
       "CLIENT_MISSING": "fail2ban-client missing",
-      "NO_SOCKET": "No socket: only the history and current bans are read from the database"
+      "NO_SOCKET": "No socket: only the history and current bans are read from the database",
+      "AGENT_OFFLINE": "Agent offline"
     },
     "edit": "Edit",
     "createTitle": "New instance",
@@ -332,6 +334,29 @@
         "understood": "I understand, I keep a way back in",
         "start": "Start the trial"
       }
+    },
+    "agent": {
+      "title": "Add an agent (another machine)",
+      "intro": "An agent runs in Docker on another machine that has fail2ban. It connects to this server by itself, encrypted, with no port to open on its side. It only reads: jails, current bans, history, firewall.",
+      "nameHint": "The machine's name, for example myoueb.",
+      "create": "Create the enrolment code",
+      "codeTitle": "Agent {{name}}: file to install",
+      "codeWarning": "The code works once and until {{time}}. It will not be shown again: copy the file now.",
+      "step1": "On the machine that has fail2ban, create a folder and save this file in it as docker-compose.yml.",
+      "step2": "In that folder, run",
+      "step3": "The instance shows as online here within seconds.",
+      "centralUrl": "This server's address as the agent sees it",
+      "centralHint": "Over https. The agent refuses http, unless AGENT_ALLOW_INSECURE=true for a test.",
+      "copy": "Copy the file",
+      "copied": "File copied.",
+      "done": "Done",
+      "pending": "Waiting for the agent",
+      "waiting": "Agent not enrolled yet",
+      "details": "Agent v{{version}}, read-only",
+      "online": "Online",
+      "lastSeen": "Seen {{time}}",
+      "codeUntil": "Code valid until {{time}}",
+      "newCode": "New code"
     }
   },
   "jails": {

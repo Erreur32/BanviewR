@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-05
+
+### For users
+
+- Agents: the fail2ban of another machine in the same BanviewR, read-only. Instances, "Add an agent" gives a one-time code (15 minutes) inside a ready `docker-compose.yml`; the agent, started on the other machine, connects out to this server over an encrypted WebSocket, with no port to open on its side. Jails, current bans, history, statistics and firewall audit then work as for a local instance. Ban, unban, jail actions and blocklists are refused on agent instances.
+- Instances shows for each agent whether it is online, its version and when it was last seen, with a "New code" button to enrol it again.
+
+### Security
+
+- The enrolment code works once and is traded for a secret per agent; only their hashes are stored. A new code or removing the instance cuts off the old secret. The agent refuses plain `http://` unless `AGENT_ALLOW_INSECURE=true`. Enrolment and connection are rate limited and audited.
+
+### API
+
+- `POST /api/agents` (admin, password confirmed) creates an agent instance and its code, `POST /api/agents/:hostId/code` gives a new code, `POST /api/agents/enroll` and the WebSocket `GET /api/agents/connect` are for the agent. Instances gain the mode `agent`, an `agent` field (online, version, last seen) and the status error `AGENT_OFFLINE`.
+
 ## [0.7.1] - 2026-11-05
 
 ### Fixed

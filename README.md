@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.7.1-111827?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.8.0-111827?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
@@ -52,6 +52,7 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 - Firewall audit: iptables, ipset and nftables rules set by fail2ban
 - Blocklists, notifications (webhook, Discord, Telegram, MQTT), MCP server for AI agents
 - Embedded mode: BanviewR runs its own fail2ban where none is installed, in the host firewall and Docker's `DOCKER-USER`
+- Agents: the fail2ban of other machines in the same UI, read-only, through an agent that connects out to BanviewR (see [Agent mode](#agent-mode))
 - Multi-user auth with three roles (viewer, operator, admin), password confirmation for sensitive changes, disabled accounts, session list, profile pictures, brute force protection, API tokens, audit log, English and French UI (see [Accounts](#accounts))
 - Sidebar menu with foldable groups, badges for what waits (critical addresses, firewall issues, fresh bans), a compact icon rail, and Ctrl K to go to a page or an address
 
@@ -59,7 +60,8 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 
 - **v0.1, extraction:** port the fail2ban part of LogviewR, external mode (host fail2ban through its socket and `fail2ban.sqlite3`)
 - **v0.2, embedded mode:** the container runs `fail2ban-server` itself when no host socket is found. Start, stop and status from the Instances page behind the `EMBEDDED_ALLOWED` lock, host firewall backend detection, `DOCKER-USER` for published container ports (see [Embedded mode](#embedded-mode))
-- **Later, multi-host:** one UI driving several hosts
+- **Multi-host, step 1 (read-only agents):** an agent next to each remote fail2ban, connected to the central BanviewR (see [Agent mode](#agent-mode))
+- **Next:** ban and unban through an agent, switched on from the agent's own machine; a view across all instances
 
 ## Stack
 
@@ -101,6 +103,21 @@ The firewall audit reads the host firewall (`iptables-save`, `ipset list`, `nft 
 ```bash
 docker exec -it banviewr node --import tsx server/cli.ts reset-password <username>
 ```
+
+## Agent mode
+
+Shows the fail2ban of another machine in this BanviewR, next to the local one. A small agent (the same image) runs on that machine and connects to this server by itself, over an encrypted WebSocket: nothing listens on the agent's side, there is no port to open there.
+
+1. On this server, Instances, **Add an agent**: give the machine a name. You get a one-time code, valid 15 minutes, inside a ready `docker-compose.yml` (the same as [`docker-compose.agent.yml`](docker-compose.agent.yml)).
+2. On the other machine, save that file in a folder and run `docker compose up -d`.
+3. The instance shows as online within seconds: jails, current bans, history, statistics and firewall audit, as for a local instance.
+
+How it is kept safe:
+
+- **Read-only.** The agent only answers reads (jails, bans, history, configuration, firewall). Ban, unban, jail start or stop and blocklists are refused by the server before anything is sent, and the agent has no code path for them.
+- **One secret per agent.** The code is traded once for the agent's own secret, kept in its `./data/agent-secret` (mode 600). The server only stores hashes of both. A new code from the Instances page enrols the agent again and cuts off the old secret; removing the instance cuts it off too.
+- **HTTPS only.** The agent refuses an `http://` address unless `AGENT_ALLOW_INSECURE=true` (tests on a trusted LAN). A self-signed central: mount its certificate and set `NODE_EXTRA_CA_CERTS=/data/central-ca.pem`. Behind a reverse proxy, turn on its WebSocket support for `/api/agents/connect`.
+- **Checked both ways.** Every message is validated on both sides, answers that do not match the expected shape are refused, a silent link is dropped after one missed ping and the agent reconnects on its own.
 
 ## Embedded mode
 

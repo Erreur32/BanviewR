@@ -16,7 +16,8 @@ export default defineConfig({
     proxy: {
       // A regex, not the '/api' prefix: that one also catches the /api.ts module of the web app.
       // Host is kept and X-Forwarded-For added: the server checks Origin against Host and logs the real client IP
-      '^/api/': { target: `http://127.0.0.1:${serverPort}`, xfwd: true },
+      // ws: agents connect to /api/agents/connect through this port too
+      '^/api/': { target: `http://127.0.0.1:${serverPort}`, xfwd: true, ws: true },
     },
   },
   build: { outDir: '../dist', emptyOutDir: true },

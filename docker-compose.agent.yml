@@ -1,0 +1,29 @@
+# Agent mode: on another machine with fail2ban, serves it to a central BanviewR (read-only).
+# The agent opens the connection to the central itself: nothing listens here, no port to open.
+# Instances page of the central, "Add an agent": it fills CENTRAL_URL and ENROLL_CODE for you.
+#   docker compose -f docker-compose.agent.yml up -d
+services:
+  banviewr-agent:
+    image: ghcr.io/erreur32/banviewr:latest
+    container_name: banviewr-agent
+    command: ["node", "--import", "tsx", "server/agent.ts"]
+    # Host network: the firewall audit reads the host's rules
+    network_mode: host
+    restart: unless-stopped
+    # Reading the firewall (iptables-save, ipset, nft) needs NET_ADMIN, remove it to drop the audit
+    cap_add:
+      - NET_ADMIN
+    # The agent serves no web page
+    healthcheck:
+      disable: true
+    environment:
+      CENTRAL_URL: https://banviewr.example.org
+      # One-time code, valid 15 minutes, only needed for the first start
+      ENROLL_CODE: bvre_paste-the-code-here
+    volumes:
+      # The agent's secret, kept after enrolment (mode 600)
+      - ./data:/data
+      # fail2ban's socket is root-only: the container runs as root to reach it
+      - /var/run/fail2ban:/var/run/fail2ban
+      - /var/lib/fail2ban:/var/lib/fail2ban:ro
+      - /etc/fail2ban:/etc/fail2ban:ro
