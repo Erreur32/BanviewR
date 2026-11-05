@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-05
+
+### For users
+
+- Go to a page with Ctrl K (Cmd K) or the "Go to" button of the menu: type part of a page name, case and accents do not count, or an IP address to open its page on the chosen instance.
+- Menu badges for what waits on the chosen instance: critical addresses of the last 24 hours on Addresses, issues of the last firewall audit on Firewall (no audit is run for it), a dot on Live when a ban is less than 5 minutes old. A folded group takes the colour of what waits inside; in the rail the badges become dots.
+
 ## [0.4.0] - 2026-11-05
 
 ### Security

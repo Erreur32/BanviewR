@@ -613,5 +613,12 @@
     "title": "Confirm your password",
     "intro": "This action changes accounts or tokens. Your password stays valid for 10 minutes for the next ones.",
     "submit": "Confirm"
+  },
+  "search": {
+    "title": "Go to a page",
+    "button": "Go to…",
+    "placeholder": "A page, or an IP address",
+    "openIp": "Open address {{ip}}",
+    "none": "Nothing matches."
   }
 }
