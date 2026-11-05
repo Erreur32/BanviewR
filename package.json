@@ -1,7 +1,7 @@
 {
   "name": "banviewr",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "predev": "lsof -ti:3025 2>/dev/null | xargs -r kill -9; lsof -ti:5185 2>/dev/null | xargs -r kill -9; true",
@@ -22,7 +22,7 @@
     "@fastify/cookie": "^11.1.5",
     "@fastify/helmet": "^13.2.0",
     "@fastify/rate-limit": "^11.2.1",
-    "@fastify/static": "^10.1.8",
+    "@fastify/static": "^10.1.10",
     "@fastify/swagger": "^9.9.2",
     "@fastify/swagger-ui": "^6.1.2",
     "@modelcontextprotocol/sdk": "^1.32.2",
