@@ -319,6 +319,16 @@ describe('jail config', () => {
     expect(conf({ 'jail.conf': text })).toMatchObject([{ name: 'MyJail', enabled: true, filter: 'MyJail' }]);
   });
 
+  it('resolves %(key)s from the jail, then [DEFAULT]', () => {
+    const text =
+      '[DEFAULT]\nmode = normal\nfilter = %(__name__)s[mode=%(mode)s]\n[sshd]\n[postfix]\nmode = more\n[odd]\nfilter = x[a=%(nope)s]\n';
+    expect(conf({ 'jail.conf': text }).map((j) => j.filter)).toEqual([
+      'sshd[mode=normal]',
+      'postfix[mode=more]',
+      'x[a=%(nope)s]',
+    ]);
+  });
+
   it('survives a missing directory', () => {
     expect(readJailConfigs(join(dir, 'nope'))).toEqual([]);
   });

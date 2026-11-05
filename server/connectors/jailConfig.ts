@@ -76,7 +76,11 @@ export function readJailConfigs(confDir: string): JailConfig[] {
         name,
         // fail2ban's own default: a jail runs only when asked to
         enabled: ['true', 'yes', '1', 'on'].includes((value('enabled') ?? 'false').toLowerCase()),
-        filter: value('filter')?.replaceAll('%(__name__)s', name) ?? null,
+        // %(mode)s and the like, from the jail then [DEFAULT]; unknown ones stay as written
+        filter:
+          value('filter')?.replace(/%\((\w+)\)s/g, (raw, key: string) =>
+            key === '__name__' ? name : (value(key.toLowerCase()) ?? raw),
+          ) ?? null,
         bantime: parseDuration(value('bantime')),
         findtime: parseDuration(value('findtime')),
         maxretry: Number.isNaN(maxretry) ? null : maxretry,
