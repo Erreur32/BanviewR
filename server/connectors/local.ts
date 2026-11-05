@@ -157,6 +157,8 @@ export function localConnector(
         const { stdout } = await exec(['version']);
         return { reachable: true, version: stdout.trim(), error: null };
       } catch (err) {
+        // No socket is the cause to tell, even where fail2ban-client is missing too
+        if (!existsSync(host.socketPath)) return { reachable: false, version: null, error: 'NO_SOCKET' };
         const missing = (err as NodeJS.ErrnoException).code === 'ENOENT';
         return { reachable: false, version: null, error: missing ? 'CLIENT_MISSING' : 'UNREACHABLE' };
       }

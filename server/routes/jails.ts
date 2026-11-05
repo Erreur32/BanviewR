@@ -101,14 +101,19 @@ export const jailRoutes: FastifyPluginAsyncZod = async (app) => {
       schema: {
         params: hostParams,
         // 0 = everything
-        querystring: z.object({ days: z.coerce.number().int().min(0).max(3650).default(30) }),
+        // slots=false leaves out the hourly slots
+        querystring: z.object({
+          days: z.coerce.number().int().min(0).max(3650).default(30),
+          slots: z.stringbool().default(true),
+        }),
         response: { 200: okResponse({ stats: banStats }) },
       },
     },
     // From the local history: it outlives fail2ban's purge and needs no running fail2ban
     async (req) => {
       getHost(app.db, req.params.hostId);
-      return ok({ stats: readBanStats(app.db, req.params.hostId, req.query.days, app.geo.locate) });
+      const { days, slots } = req.query;
+      return ok({ stats: readBanStats(app.db, req.params.hostId, days, app.geo.locate, slots) });
     },
   );
 

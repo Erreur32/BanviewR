@@ -1,20 +1,16 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 // Hand-written charts, no chart library. Jail colors checked with a palette validator against bg1
-// (#161b22): lightness band, chroma, color-blind separation, contrast.
-export const JAIL_PALETTE = ['#388bfd', '#db6d28', '#a371f7', '#2ea043'];
+// (#161b22): lightness band, chroma, contrast; the pink and cyan pair sits in the 6 to 8 color-blind
+// band, fine here because every chart also has a legend, tooltips and a table view.
+export const JAIL_PALETTE = ['#388bfd', '#db6d28', '#a371f7', '#2ea043', '#db61a2', '#1f9bb0'];
 export const OTHER_COLOR = '#6e7681';
-const PINNED = ['sshd', 'recidive'];
 
-// A color follows its jail, never its rank: sshd and recidive always keep the first two colors, the
-// other jails take the next ones by name. Past the palette they share the "other" gray rather than
-// new hues nobody can tell apart.
-export function jailColors(names: Iterable<string>) {
-  const colors = new Map(PINNED.map((name, i) => [name, JAIL_PALETTE[i] ?? OTHER_COLOR]));
-  const others = [...new Set(names)].filter((name) => !colors.has(name)).sort((a, b) => a.localeCompare(b));
-  others.forEach((name, i) => {
-    colors.set(name, JAIL_PALETTE[PINNED.length + i] ?? OTHER_COLOR);
-  });
+// ranked: the busiest jails first, they take the palette in that order; the other names follow by
+// name. Past the palette they share the "other" gray rather than new hues nobody can tell apart.
+export function jailColors(ranked: string[], rest: Iterable<string> = []) {
+  const order = [...new Set([...ranked, ...[...rest].sort((a, b) => a.localeCompare(b))])];
+  const colors = new Map(order.map((name, i) => [name, JAIL_PALETTE[i] ?? OTHER_COLOR]));
   return (name: string) => colors.get(name) ?? OTHER_COLOR;
 }
 

@@ -83,7 +83,8 @@ export function startBanSync(app: FastifyInstance, historyDays: number) {
 }
 
 // days = 0 covers everything: `since` is then 0, older than any ban
-export function readBanStats(db: Db, hostId: number, days: number, locate: Locate): BanStats {
+// withSlots false: only the totals and tops, for callers that do not draw hours (a year of them weighs)
+export function readBanStats(db: Db, hostId: number, days: number, locate: Locate, withSlots = true): BanStats {
   const since = daysAgo(days);
   const inPeriod = and(eq(banEvents.hostId, hostId), gte(banEvents.bannedAt, since));
   const bans = count();
@@ -113,13 +114,21 @@ export function readBanStats(db: Db, hostId: number, days: number, locate: Locat
       .orderBy(desc(bans))
       .limit(TOP)
       .all(),
-    slots: db
-      .select({ at: slot, jail: banEvents.jail, bans })
-      .from(banEvents)
-      .where(inPeriod)
-      .groupBy(slot, banEvents.jail)
-      .orderBy(slot)
-      .all(),
+    slots: withSlots
+      ? db
+          .select({ at: slot, jail: banEvents.jail, bans })
+          .from(banEvents)
+          .where(inPeriod)
+          .groupBy(slot, banEvents.jail)
+          .orderBy(slot)
+          .all()
+      : [],
+    firstBanAt:
+      db
+        .select({ at: min(banEvents.bannedAt) })
+        .from(banEvents)
+        .where(eq(banEvents.hostId, hostId))
+        .get()?.at ?? null,
   };
 }
 

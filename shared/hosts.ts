@@ -20,7 +20,8 @@ export const hostPatch = hostBody.partial().refine((p) => Object.keys(p).length 
 export const hostStatus = z.object({
   reachable: z.boolean(),
   version: z.string().nullable(),
-  error: z.enum(['CLIENT_MISSING', 'UNREACHABLE']).nullable(),
+  // NO_SOCKET: nothing at the socket path, only the history and current bans of the database are read
+  error: z.enum(['NO_SOCKET', 'CLIENT_MISSING', 'UNREACHABLE']).nullable(),
 });
 export type HostStatus = z.infer<typeof hostStatus>;
 

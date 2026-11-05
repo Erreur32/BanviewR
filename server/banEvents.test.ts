@@ -108,6 +108,8 @@ describe('ban stats', () => {
       uniqueIps: 1,
       topIps: [{ ip: '203.0.113.1', count: 2 }],
       topJails: [{ jail: 'sshd', bans: 2, failures: 6 }],
+      // The whole history of the instance, not just the period
+      firstBanAt: NOW - 40 * 86400,
     });
   });
 
@@ -120,6 +122,13 @@ describe('ban stats', () => {
     expect(all.slots[0]?.at).toBeLessThan(all.slots[2]?.at ?? 0);
   });
 
+  it('leaves the slots out when asked, totals unchanged', async () => {
+    await twoHosts();
+    const light = readBanStats(db, 1, 0, noGeo, false);
+    expect(light).toMatchObject({ totalBans: 3, slots: [] });
+    expect(light.topJails).toHaveLength(2);
+  });
+
   it('is empty without bans', () => {
     expect(readBanStats(db, 1, 30, noGeo)).toEqual({
       totalBans: 0,
@@ -129,6 +138,7 @@ describe('ban stats', () => {
       orgs: [],
       topJails: [],
       slots: [],
+      firstBanAt: null,
     });
   });
 

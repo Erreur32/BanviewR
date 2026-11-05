@@ -278,7 +278,10 @@ function StatusBadge({ host }: { host: HostRow }) {
   const { t } = useTranslation();
   const { reachable, version, error } = host.status;
   if (reachable) return <Badge tone="ok">{t('instances.reachable', { version })}</Badge>;
-  return <Badge tone="danger">{t(`instances.error.${error ?? 'UNREACHABLE'}`)}</Badge>;
+  // Without a socket the database is still read: not an error to colour red
+  return (
+    <Badge tone={error === 'NO_SOCKET' ? 'neutral' : 'danger'}>{t(`instances.error.${error ?? 'UNREACHABLE'}`)}</Badge>
+  );
 }
 
 function InstanceRow({

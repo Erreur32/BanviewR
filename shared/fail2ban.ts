@@ -69,6 +69,9 @@ export const banStats = z.object({
   topJails: z.array(z.object({ jail: z.string(), bans: z.number(), failures: z.number() })),
   // Hourly slots per jail, `at` in unix seconds: the reader folds them in its own time zone
   slots: z.array(z.object({ at: z.number(), jail: z.string(), bans: z.number() })),
+  // Oldest ban kept for the instance, unix seconds, null without any: a comparison with an earlier
+  // window only means something when the history reaches back that far
+  firstBanAt: z.number().nullable(),
 });
 export type BanStats = z.infer<typeof banStats>;
 

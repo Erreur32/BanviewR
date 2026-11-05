@@ -54,9 +54,13 @@ export function dayColumns(
 }
 
 // Bans of the window that ends where the current one starts, for the trend
-export function previousWindow(slots: BanStats['slots'], now: number, hours: number) {
+// Bans of the window just before the current one, null when the history starts inside it (a new
+// instance, or fail2ban's own purge before BanviewR came): an hour of slack for the first slot
+export function previousWindow(slots: BanStats['slots'], now: number, hours: number, firstBanAt: number | null) {
   const end = now - hours * HOUR;
-  return slots.filter((s) => s.at >= end - hours * HOUR && s.at < end).reduce((total, s) => total + s.bans, 0);
+  const start = end - hours * HOUR;
+  if (firstBanAt === null || firstBanAt > start + HOUR) return null;
+  return slots.filter((s) => s.at >= start && s.at < end).reduce((total, s) => total + s.bans, 0);
 }
 
 export type Severity = { info: number; low: number; medium: number; high: number; critical: number };
@@ -88,8 +92,8 @@ export function severity(threats: ThreatRow[], uniqueIps: number): Severity {
 }
 
 // Percent change, null when there is nothing to compare with
-export function trend(current: number, previous: number) {
-  if (previous === 0) return null;
+export function trend(current: number, previous: number | null) {
+  if (!previous) return null;
   return Math.round(((current - previous) / previous) * 100);
 }
 
