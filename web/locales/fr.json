@@ -155,11 +155,20 @@
     "avatarPick": "Choisir une image",
     "avatarRemove": "Retirer la photo",
     "avatarTooBig": "Image trop lourde (10 Mo au plus).",
-    "avatarUnreadable": "Image illisible, essayez un autre fichier."
+    "avatarUnreadable": "Image illisible, essayez un autre fichier.",
+    "mustChangeTitle": "Nouveau mot de passe",
+    "mustChangeIntro": "Un admin a choisi votre mot de passe actuel. Choisissez le vôtre pour continuer.",
+    "sessionsTitle": "Sessions ouvertes",
+    "sessionsIntro": "Les navigateurs connectés à votre compte. Déconnectez ceux que vous ne reconnaissez pas.",
+    "sessionDevice": "Appareil",
+    "sessionSince": "Ouverte le",
+    "sessionCurrent": "cette session",
+    "sessionRevoke": "Déconnecter",
+    "sessionRevokeOthers": "Déconnecter les autres sessions"
   },
   "users": {
     "title": "Utilisateurs",
-    "intro": "Les admins pilotent fail2ban et gèrent l'application, les opérateurs bannissent, débannissent et pilotent les jails, les comptes en lecture seule consultent uniquement.",
+    "intro": "Les admins pilotent fail2ban et gèrent l'application, les opérateurs bannissent, débannissent et pilotent les jails, les comptes en lecture seule consultent uniquement. Un mot de passe choisi par un admin (création, réinitialisation) doit être changé à la première connexion.",
     "role": "Rôle",
     "createdAt": "Créé le",
     "lastLogin": "Dernière connexion",
@@ -172,10 +181,16 @@
     "deleted": "Utilisateur {{username}} supprimé.",
     "resetPassword": "Nouveau mot de passe",
     "newPasswordFor": "Nouveau mot de passe pour {{username}}",
-    "passwordResetHint": "10 caractères minimum. Ses sessions ouvertes seront déconnectées.",
+    "passwordResetHint": "10 caractères minimum. Ses sessions ouvertes seront déconnectées et il devra choisir son propre mot de passe à la connexion suivante.",
     "passwordReset": "Mot de passe de {{username}} changé.",
     "removeAvatar": "Retirer la photo",
-    "avatarRemoved": "Photo de {{username}} retirée."
+    "avatarRemoved": "Photo de {{username}} retirée.",
+    "disabled": "désactivé",
+    "mustChange": "mot de passe à changer",
+    "enable": "Réactiver",
+    "disable": "Désactiver",
+    "disabledDone": "{{username}} est désactivé : ses sessions et ses jetons sont coupés.",
+    "enabledDone": "{{username}} peut de nouveau se connecter."
   },
   "tokens": {
     "title": "Jetons d'API",
@@ -349,7 +364,10 @@
     "LOCKED": "Trop d'échecs : compte bloqué temporairement, réessayez dans 15 minutes.",
     "RATE_LIMITED": "Trop de requêtes, patientez un peu.",
     "UNAVAILABLE": "fail2ban ne répond pas pour cette instance.",
-    "INTERNAL": "Erreur du serveur, réessayez plus tard."
+    "INTERNAL": "Erreur du serveur, réessayez plus tard.",
+    "REAUTH_REQUIRED": "Confirmez votre mot de passe pour cette action.",
+    "PASSWORD_CHANGE_REQUIRED": "Choisissez d'abord un nouveau mot de passe.",
+    "ACCOUNT_DISABLED": "Ce compte est désactivé. Demandez à un admin de le réactiver."
   },
   "stats": {
     "title": "Statistiques",
@@ -590,5 +608,10 @@
     "active": "en cours",
     "ended": "terminé",
     "new": "nouveau"
+  },
+  "reauth": {
+    "title": "Confirmez votre mot de passe",
+    "intro": "Cette action touche aux comptes ou aux jetons. Votre mot de passe reste valable 10 minutes pour les actions suivantes.",
+    "submit": "Confirmer"
   }
 }

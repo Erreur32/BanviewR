@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { auditLog, sessions } from '../db/schema.ts';
-import { buildTestApp, pw } from '../test-utils.ts';
+import { addUser, buildTestApp, pw } from '../test-utils.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
 const ADMIN = { username: 'admin', password: pw('correct-horse-battery') };
@@ -46,12 +46,8 @@ async function setupAdmin() {
   return sessionCookie(await call('POST', '/api/auth/setup', { body: ADMIN }));
 }
 
-async function createUser(admin: string, username: string, role: 'admin' | 'operator' | 'viewer') {
-  await call('POST', '/api/users', { cookie: admin, body: { username, password: pw('viewer-password-1'), role } });
-  return sessionCookie(
-    await call('POST', '/api/auth/login', { body: { username, password: pw('viewer-password-1') } }),
-  );
-}
+const createUser = (admin: string, username: string, role: 'admin' | 'operator' | 'viewer') =>
+  addUser(app, admin, username, role);
 
 async function createToken(admin: string, body: object) {
   return result(await call('POST', '/api/tokens', { cookie: admin, body })).secret as string;

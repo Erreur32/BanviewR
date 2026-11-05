@@ -33,6 +33,10 @@ export const users = sqliteTable(
     lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
     // When the picture in avatars was set, null = initials. Also busts the browser cache.
     avatarAt: integer('avatar_at', { mode: 'timestamp' }),
+    // Set when an admin chose the password (new account, reset): the user picks their own first
+    mustChangePassword: integer('must_change_password', { mode: 'boolean' }).notNull().default(false),
+    // A disabled account cannot sign in; its sessions and tokens are gone
+    disabledAt: integer('disabled_at', { mode: 'timestamp' }),
   },
   // 'admin' and 'Admin' are the same account
   (t) => [uniqueIndex('users_username_nocase').on(sql`lower(${t.username})`)],
@@ -57,6 +61,8 @@ export const sessions = sqliteTable('sessions', {
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   ip: text('ip').notNull(),
   userAgent: text('user_agent').notNull(),
+  // Last time the password was typed in this session: sensitive admin actions need it recent
+  confirmedAt: integer('confirmed_at', { mode: 'timestamp' }),
   createdAt: createdAt(),
 });
 

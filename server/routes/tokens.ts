@@ -46,7 +46,8 @@ export const tokenRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/tokens',
     {
-      config: ADMIN_SESSION,
+      // A token can hold the admin scope: same confirmation as an account change
+      config: { ...ADMIN_SESSION, recentAuth: true },
       schema: {
         body: createTokenBody,
         response: { 200: okResponse({ token: tokenRow, secret: z.string() }) },

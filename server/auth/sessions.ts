@@ -17,6 +17,8 @@ export function createSession(db: Db, userId: number, ip: string, userAgent: str
       expiresAt: new Date(Date.now() + SESSION_TTL_MS),
       ip,
       userAgent: userAgent.slice(0, 256),
+      // Signing in is typing the password
+      confirmedAt: new Date(),
     })
     .run();
   return token;
@@ -25,7 +27,7 @@ export function createSession(db: Db, userId: number, ip: string, userAgent: str
 export function resolveSession(db: Db, token: string) {
   const id = sha256(token);
   const row = db
-    .select({ expiresAt: sessions.expiresAt, user: users })
+    .select({ expiresAt: sessions.expiresAt, confirmedAt: sessions.confirmedAt, user: users })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(eq(sessions.id, id))
@@ -34,7 +36,8 @@ export function resolveSession(db: Db, token: string) {
 
   const now = Date.now();
   const remaining = row.expiresAt.getTime() - now;
-  if (remaining <= 0) {
+  // Disabling deletes the sessions too: this only covers a row written in between
+  if (remaining <= 0 || row.user.disabledAt) {
     deleteSession(db, id);
     return null;
   }
@@ -45,7 +48,11 @@ export function resolveSession(db: Db, token: string) {
       .where(eq(sessions.id, id))
       .run();
   }
-  return { sessionId: id, user: row.user, refreshed };
+  return { sessionId: id, user: row.user, confirmedAt: row.confirmedAt, refreshed };
+}
+
+export function confirmSession(db: Db, sessionId: string) {
+  db.update(sessions).set({ confirmedAt: new Date() }).where(eq(sessions.id, sessionId)).run();
 }
 
 export function deleteSession(db: Db, sessionId: string) {

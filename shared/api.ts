@@ -21,6 +21,11 @@ export const apiErrorCode = z.enum([
   'FORBIDDEN',
   'INVALID_CREDENTIALS',
   'LOCKED',
+  // The password must be typed again before this action (sensitive admin changes)
+  'REAUTH_REQUIRED',
+  // An admin chose this password: nothing else works until the user picks their own
+  'PASSWORD_CHANGE_REQUIRED',
+  'ACCOUNT_DISABLED',
   'RATE_LIMITED',
   'UNAVAILABLE',
   'INTERNAL',

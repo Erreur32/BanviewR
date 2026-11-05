@@ -43,6 +43,7 @@ export const userInfo = z.object({
   role,
   timezone: z.string(),
   avatarAt: z.string().nullable(),
+  mustChangePassword: z.boolean(),
 });
 export type UserInfo = z.infer<typeof userInfo>;
 
@@ -54,10 +55,23 @@ export const authStatus = z.object({
 export type AuthStatus = z.infer<typeof authStatus>;
 
 export const userRow = userInfo.extend({
+  disabledAt: z.string().nullable(),
   createdAt: z.string(),
   lastLoginAt: z.string().nullable(),
 });
 export type UserRow = z.infer<typeof userRow>;
+
+// Session ids are the SHA-256 of the cookie: showing them gives nothing to sign in with
+export const sessionId = z.string().regex(/^[0-9a-f]{64}$/);
+export const sessionRow = z.object({
+  id: sessionId,
+  ip: z.string(),
+  userAgent: z.string(),
+  createdAt: z.string(),
+  expiresAt: z.string(),
+  current: z.boolean(),
+});
+export type SessionRow = z.infer<typeof sessionRow>;
 
 export const tokenRow = z.object({
   id: z.number(),

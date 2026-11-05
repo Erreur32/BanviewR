@@ -1,12 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { UserInfo } from '../../shared/auth.ts';
+import type { SessionRow, UserInfo } from '../../shared/auth.ts';
+import { describeAgent } from '../agent.ts';
 import { ApiError, api } from '../api.ts';
-import { authStatusQuery, useCurrentUser } from '../auth.ts';
+import { authStatusQuery, useCurrentUser, useFormatDateTime } from '../auth.ts';
 import { squarePicture } from '../avatar.ts';
 import { Avatar } from '../components/Avatar.tsx';
-import { Button, Card, ErrorText, SelectField, TextField } from '../components/ui.tsx';
+import { Badge, Button, Card, ErrorText, SelectField, Table, TextField } from '../components/ui.tsx';
 import { browserTimeZone, formatDateTime } from '../dates.ts';
 import { errorText } from '../errors.ts';
 import { LANGUAGES, setLanguage } from '../i18n.ts';
@@ -144,7 +145,8 @@ function AvatarCard() {
   );
 }
 
-function PasswordCard() {
+// Also the whole page when an admin chose the password (onDone then opens the app)
+export function PasswordCard({ onDone }: { onDone?: () => void }) {
   const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -158,6 +160,7 @@ function PasswordCard() {
       setNewPassword('');
       setConfirm('');
       notify('success', t('prefs.passwordChanged'));
+      onDone?.();
     },
   });
 
@@ -167,41 +170,106 @@ function PasswordCard() {
     if (newPassword === confirm) change.mutate();
   }
 
+  const form = (
+    <form onSubmit={submit}>
+      <ErrorText>{mismatch ? t('auth.passwordMismatch') : change.error && errorText(t, change.error)}</ErrorText>
+      <TextField
+        label={t('prefs.currentPassword')}
+        type="password"
+        value={currentPassword}
+        onChange={(e) => setCurrentPassword(e.target.value)}
+        autoComplete="current-password"
+        required
+      />
+      <TextField
+        label={t('prefs.newPassword')}
+        hint={t('auth.passwordHint')}
+        type="password"
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+        autoComplete="new-password"
+        minLength={10}
+        required
+      />
+      <TextField
+        label={t('auth.passwordConfirm')}
+        type="password"
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        autoComplete="new-password"
+        required
+      />
+      <Button type="submit" disabled={change.isPending}>
+        {t('prefs.passwordSubmit')}
+      </Button>
+    </form>
+  );
+  // On the forced change page the surrounding shell is the card already
+  if (onDone) return form;
   return (
     <Card title={t('prefs.passwordTitle')}>
       <p className="mb-4 text-sm text-muted">{t('prefs.passwordIntro')}</p>
-      <form onSubmit={submit}>
-        <ErrorText>{mismatch ? t('auth.passwordMismatch') : change.error && errorText(t, change.error)}</ErrorText>
-        <TextField
-          label={t('prefs.currentPassword')}
-          type="password"
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-          autoComplete="current-password"
-          required
-        />
-        <TextField
-          label={t('prefs.newPassword')}
-          hint={t('auth.passwordHint')}
-          type="password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          autoComplete="new-password"
-          minLength={10}
-          required
-        />
-        <TextField
-          label={t('auth.passwordConfirm')}
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          autoComplete="new-password"
-          required
-        />
-        <Button type="submit" disabled={change.isPending}>
-          {t('prefs.passwordSubmit')}
+      {form}
+    </Card>
+  );
+}
+
+const sessionsKey = ['auth', 'sessions'];
+
+function SessionsCard() {
+  const { t } = useTranslation();
+  const formatDate = useFormatDateTime();
+  const queryClient = useQueryClient();
+  const list = useQuery({
+    queryKey: sessionsKey,
+    queryFn: () => api.get<{ sessions: SessionRow[] }>('/auth/sessions'),
+  });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: sessionsKey });
+  const revoke = useMutation({ mutationFn: (id: string) => api.delete(`/auth/sessions/${id}`), onSuccess: refresh });
+  const revokeOthers = useMutation({ mutationFn: () => api.post('/auth/sessions/revoke-others'), onSuccess: refresh });
+  const sessions = list.data?.sessions ?? [];
+  const error = list.error ?? revoke.error ?? revokeOthers.error;
+
+  return (
+    <Card title={t('prefs.sessionsTitle')}>
+      <p className="mb-4 text-sm text-muted">{t('prefs.sessionsIntro')}</p>
+      <ErrorText>{error && errorText(t, error)}</ErrorText>
+      <Table columns={[t('prefs.sessionDevice'), t('prefs.sessionSince'), '']}>
+        {sessions.map((session) => (
+          <tr key={session.id}>
+            <td>
+              <span className="block">
+                {describeAgent(session.userAgent)}{' '}
+                {session.current && <Badge tone="accent">{t('prefs.sessionCurrent')}</Badge>}
+              </span>
+              <span className="font-mono text-xs text-muted">{session.ip}</span>
+            </td>
+            <td className="whitespace-nowrap text-muted">{formatDate(session.createdAt)}</td>
+            <td className="text-right">
+              {!session.current && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => revoke.mutate(session.id)}
+                  disabled={revoke.isPending}
+                >
+                  {t('prefs.sessionRevoke')}
+                </Button>
+              )}
+            </td>
+          </tr>
+        ))}
+      </Table>
+      {sessions.length > 1 && (
+        <Button
+          variant="secondary"
+          className="mt-4"
+          onClick={() => revokeOthers.mutate()}
+          disabled={revokeOthers.isPending}
+        >
+          {t('prefs.sessionRevokeOthers')}
         </Button>
-      </form>
+      )}
     </Card>
   );
 }
@@ -214,6 +282,7 @@ export function PreferencesPage() {
       <AvatarCard />
       <DisplayCard />
       <PasswordCard />
+      <SessionsCard />
     </div>
   );
 }

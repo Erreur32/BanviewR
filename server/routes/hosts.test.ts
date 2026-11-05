@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { HostStatus } from '../../shared/hosts.ts';
 import { auditLog } from '../db/schema.ts';
-import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
+import { addUser, buildTestApp, fakeConnector, pw } from '../test-utils.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
 const ADMIN = { username: 'admin', password: pw('hosts-admin') };
@@ -115,16 +115,7 @@ describe('instance access', () => {
   });
 
   it('refuses writes from viewers', async () => {
-    const viewer = { username: 'viewer', password: pw('hosts-viewer'), role: 'viewer' };
-    await asAdmin('POST', '/api/users', viewer);
-    const login = await app.inject({
-      method: 'POST',
-      url: '/api/auth/login',
-      headers: ORIGIN,
-      payload: { username: viewer.username, password: viewer.password },
-    });
-    const viewerCookie = `bvr_session=${login.cookies.find((c) => c.name === 'bvr_session')?.value}`;
-    const headers = { ...ORIGIN, cookie: viewerCookie };
+    const headers = { ...ORIGIN, cookie: await addUser(app, cookie, 'viewer', 'viewer') };
 
     const list = await app.inject({ method: 'GET', url: '/api/hosts', headers });
     expect(list.json().result.hosts).toHaveLength(1);
