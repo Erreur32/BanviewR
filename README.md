@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.2.0-111827?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.2.1-111827?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
@@ -119,15 +119,15 @@ journalmatch = _SYSTEMD_UNIT=ssh.service + _COMM=sshd
 
 A volatile journal (`/run/log/journal`, no `/var/log/journal` folder) is not mounted: add `/run/log/journal:/run/log/journal:ro` if the host has no persistent journal.
 
-**Never banned.** Loopback, private and link-local ranges, CGNAT (Tailscale) and the Docker bridge networks up at start are written to `ignoreip` in `jail.d/00-banviewr.local`. A jail that sets its own `ignoreip` replaces that list in fail2ban: BanviewR adds the missing ranges back to every running jail on start and every minute (`fail2ban-client set <jail> addignoreip`), so a jail started or reloaded later runs up to a minute on its own list.
+**Never banned.** Loopback, private and link-local ranges, CGNAT (Tailscale) and the Docker bridge networks up at start are written to `ignoreip` in `jail.d/00-banviewr.local`. A jail that sets its own `ignoreip` replaces that list in fail2ban: BanviewR adds the missing ranges back to every running jail on start, after each jail action from BanviewR, and every minute (`fail2ban-client set <jail> addignoreip`); a jail reloaded outside BanviewR runs up to a minute on its own list.
 
 **Firewall backend.** On each start BanviewR checks which firewall the host uses, from where Docker's rules are: iptables with the nf_tables backend (`iptables-nft`, Debian's default), `iptables-legacy`, or nftables alone. The embedded fail2ban then writes to the same one (its iptables commands call `iptables-legacy` on a legacy host; `banaction = nftables` on a pure nftables host). The Instances page shows what was found.
 
-**Published container ports.** Traffic to a published Docker port goes through `FORWARD`, not `INPUT`, so a ban in `INPUT` alone does not stop it. When Docker's `DOCKER-USER` chain exists, every jail gets a second action, `iptables-allports` on `DOCKER-USER` (chain `f2b-<jail>-du`), on all ports: after Docker's DNAT the port seen there is the container's, not the published one. Both are fail2ban's own actions, set in `jail.d/00-banviewr.conf`, which your `jail.local` or `jail.d/*.local` can override. A jail with its own `action =` list adds `%(action_docker)s` to keep it. No other chain is touched.
+**Published container ports.** Traffic to a published Docker port goes through `FORWARD`, not `INPUT`, so a ban in `INPUT` alone does not stop it. When Docker's `DOCKER-USER` chain exists, every jail gets a second action, `banviewr-docker-user` (fail2ban's `iptables-allports` on `DOCKER-USER`, chain `f2b-<jail>-du`, written to `action.d/`), on all ports: after Docker's DNAT the port seen there is the container's, not the published one. Both are set in `jail.d/00-banviewr.conf`, which your `jail.local` or `jail.d/*.local` can override. A jail with its own `action =` list adds `%(action_docker)s` to keep it. No other chain is touched.
 
 **Host fail2ban detection.** Inside the container BanviewR sees the host's fail2ban through its socket only (the process and systemd checks cannot see the host). A host fail2ban that starts later is found within a minute; the embedded one stops, stays off, and a notification goes to the destinations that send manual actions. The host's systemd removes and recreates `/run/fail2ban` when its fail2ban stops and starts, which the container's mount no longer follows: BanviewR treats that replaced folder as a host fail2ban too. After removing a host fail2ban, restart the container to check again. A host fail2ban that is installed but never started is not seen.
 
-Limits: IPv6 bans reach `DOCKER-USER` only when Docker manages ip6tables (otherwise that action fails for IPv6 bans, the `INPUT` ban still applies). Docker's own nftables firewall backend has no `DOCKER-USER` chain.
+Limits: IPv6 bans reach `DOCKER-USER` only when Docker manages ip6tables; otherwise they skip it and stay in `INPUT`. Docker's own nftables firewall backend has no `DOCKER-USER` chain.
 
 ## Development
 

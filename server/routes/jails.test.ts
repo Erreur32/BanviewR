@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Fail2banConnector } from '../connectors/connector.ts';
-import { auditLog, banEvents } from '../db/schema.ts';
+import { auditLog, banEvents, hosts } from '../db/schema.ts';
 import { AppError } from '../errors.ts';
 import { covers } from '../jailOps.ts';
 import { buildTestApp, fakeConnector, pw } from '../test-utils.ts';
@@ -34,6 +34,26 @@ const withToken = (secret: string, url: string, payload: object) =>
 const lastAudit = () => app.db.select().from(auditLog).all().at(-1);
 
 describe('jails', () => {
+  it('puts the base ignoreip back after a jail action on the embedded instance', async () => {
+    const jailAction = vi.fn(async () => {});
+    await start({ jailAction });
+    const enforce = vi.spyOn(app.embedded, 'enforceIgnoreip').mockResolvedValue();
+    expect((await post('/api/hosts/1/jails/sshd/reload')).ok).toBe(true);
+    expect(enforce).not.toHaveBeenCalled();
+    app.db.update(hosts).set({ mode: 'embedded' }).run();
+    expect((await post('/api/hosts/1/jails/sshd/reload')).ok).toBe(true);
+    expect(jailAction).toHaveBeenCalledTimes(2);
+    expect(enforce).toHaveBeenCalledTimes(1);
+  });
+
+  it('copies the bans fail2ban is about to delete before an unban', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const fresh = { ip: '203.0.113.9', jail: 'sshd', timeofban: now - 10, bantime: 600, failures: 5 };
+    await start({ unban: async () => {}, bansSince: async (_since, _limit, offset) => (offset ? [] : [fresh]) });
+    expect((await post('/api/hosts/1/jails/sshd/unban', { target: '203.0.113.9' })).ok).toBe(true);
+    expect(app.db.select().from(banEvents).all()).toMatchObject([{ ip: '203.0.113.9', bannedAt: now - 10 }]);
+  });
+
   it('bans an address and audits it', async () => {
     const ban = vi.fn(async () => {});
     await start({ ban });

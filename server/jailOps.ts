@@ -2,6 +2,7 @@ import { BlockList, isIP } from 'node:net';
 import { gt } from 'drizzle-orm';
 import type { JailAction } from '../shared/fail2ban.ts';
 import { audited, type Caller, recordAudit } from './audit.ts';
+import { syncBans } from './banEvents.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
 import { sessions } from './db/schema.ts';
@@ -92,6 +93,10 @@ export async function changeBan(
 ) {
   // Whoever bans their own address loses the UI and has to fix it from the machine
   if (verb === 'ban' && covers(target, caller.ip)) throw new AppError('CONFLICT', 'This would ban your own address');
+  // fail2ban deletes the bans of an address from its database when it is unbanned: copy them first, or a ban
+  // younger than one sync round never reaches the history. A failed copy must not block the unban.
+  // shortcut: no new-ban notification for the bans copied here; pass notifyBans if people miss them
+  if (verb === 'unban') await syncBans(db, host, hostId).catch(() => 0);
   await audited(db, caller, { action: `jail.${verb}`, hostId, target, detail: jail }, () => host[verb](jail, target));
   notifyAction(db, caller, { hostId, action: verb, target, jail });
 }

@@ -62,6 +62,8 @@ export function fakeStock(root: string) {
   const stock = join(root, 'stock');
   mkdirSync(join(stock, 'filter.d'), { recursive: true });
   mkdirSync(join(stock, 'jail.d'), { recursive: true });
+  mkdirSync(join(stock, 'action.d'), { recursive: true });
+  writeFileSync(join(stock, 'action.d', 'iptables-allports.conf'), '[Definition]\n');
   writeFileSync(join(stock, 'jail.conf'), '[DEFAULT]\nbantime = 10m\n');
   writeFileSync(join(stock, 'fail2ban.conf'), '[Definition]\n');
   writeFileSync(join(stock, 'jail.d', 'defaults-debian.conf'), '[sshd]\nenabled = true\n');

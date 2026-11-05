@@ -54,6 +54,8 @@ export type EmbeddedBlock = z.infer<typeof embeddedBlock>;
 export const embeddedFirewall = z.object({
   backend: z.enum(['iptables-nft', 'iptables-legacy', 'nftables']),
   dockerUser: z.boolean(),
+  // DOCKER-USER also exists for IPv6 (Docker manages ip6tables)
+  dockerUser6: z.boolean(),
 });
 export type EmbeddedFirewall = z.infer<typeof embeddedFirewall>;
 

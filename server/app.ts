@@ -49,7 +49,18 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.decorate('db', db);
-  app.decorate('connect', deps.connect);
+  // A jail started or reloaded on the embedded fail2ban gets the base ignoreip back at once, not a minute later
+  app.decorate('connect', (host) => {
+    const connector = deps.connect(host);
+    if (host.mode !== 'embedded') return connector;
+    return {
+      ...connector,
+      async jailAction(jail, action) {
+        await connector.jailAction(jail, action);
+        await app.embedded.enforceIgnoreip();
+      },
+    };
+  });
   app.decorate('detection', deps.detection);
   app.decorate('mcpWrite', deps.mcpWrite);
   app.decorate('geo', deps.geo);

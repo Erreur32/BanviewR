@@ -2,10 +2,12 @@ import {
   chmodSync,
   existsSync,
   lstatSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readlinkSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -114,19 +116,39 @@ describe('writeBaseConfig', () => {
     writeBaseConfig(paths, {
       stockDir: fakeStock(dir),
       ignoreip: BASE_IGNOREIP,
-      firewall: { backend: 'iptables-nft', dockerUser: true },
+      firewall: { backend: 'iptables-nft', dockerUser: true, dockerUser6: false },
     });
-    expect(conf()).toContain('chain="DOCKER-USER"');
+    expect(conf()).toContain('action_docker = banviewr-docker-user[name="%(__name__)s-du"]');
+    const action = readFileSync(join(paths.confDir, 'action.d', 'banviewr-docker-user.conf'), 'utf8');
+    expect(action).toContain('before = iptables-allports.conf');
+    expect(action).toContain('chain = DOCKER-USER');
+    // No IPv6 DOCKER-USER chain: IPv6 bans skip it
+    expect(action).toMatch(/\[Init\?family=inet6\]\niptables = true/);
     expect(conf()).toMatch(/^action = %\(action_\)s\n\s+%\(action_docker\)s$/m);
     expect(conf()).not.toContain('banaction');
 
     writeBaseConfig(paths, {
       stockDir: fakeStock(dir),
       ignoreip: BASE_IGNOREIP,
-      firewall: { backend: 'nftables', dockerUser: false },
+      firewall: { backend: 'nftables', dockerUser: false, dockerUser6: false },
     });
     expect(conf()).toContain('banaction = nftables\n');
     expect(conf()).not.toContain('DOCKER-USER');
+  });
+
+  it('turns a linked action.d (v0.2.0) into a folder of links next to its own action', () => {
+    const paths = embeddedPaths(join(dir, 'data'));
+    const stock = fakeStock(dir);
+    mkdirSync(paths.confDir, { recursive: true });
+    symlinkSync(join(stock, 'action.d'), join(paths.confDir, 'action.d'));
+    writeBaseConfig(paths, { stockDir: stock, ignoreip: BASE_IGNOREIP });
+    const actions = join(paths.confDir, 'action.d');
+    expect(lstatSync(actions).isSymbolicLink()).toBe(false);
+    expect(readlinkSync(join(actions, 'iptables-allports.conf'))).toBe(
+      join(stock, 'action.d', 'iptables-allports.conf'),
+    );
+    expect(existsSync(join(stock, 'action.d', 'banviewr-docker-user.conf'))).toBe(false);
+    expect(existsSync(join(actions, 'banviewr-docker-user.conf'))).toBe(true);
   });
 
   it('escapes % for fail2ban interpolation', () => {
@@ -144,10 +166,13 @@ describe('pickFirewall', () => {
     expect(pickFirewall({ legacy: null, nft: docker, nftTables: 'table ip filter\n' })).toEqual({
       backend: 'iptables-nft',
       dockerUser: true,
+      dockerUser6: false,
     });
+    expect(pickFirewall({ legacy: null, nft: docker, nftTables: '', nft6: docker }).dockerUser6).toBe(true);
     expect(pickFirewall({ legacy: docker, nft: emptyNft, nftTables: 'table ip filter\n' })).toEqual({
       backend: 'iptables-legacy',
       dockerUser: true,
+      dockerUser6: false,
     });
   });
 
@@ -160,6 +185,7 @@ describe('pickFirewall', () => {
     expect(pickFirewall({ legacy: null, nft: null, nftTables: null })).toEqual({
       backend: 'iptables-nft',
       dockerUser: false,
+      dockerUser6: false,
     });
   });
 });
@@ -291,10 +317,12 @@ describe('embedded supervisor', () => {
   });
 
   it('shows the firewall it found and gives the server legacy iptables first in its PATH', async () => {
-    const embedded = supervisor({ firewall: async () => ({ backend: 'iptables-legacy', dockerUser: true }) });
+    const embedded = supervisor({
+      firewall: async () => ({ backend: 'iptables-legacy', dockerUser: true, dockerUser6: true }),
+    });
     expect(embedded.status().firewall).toBeNull();
     await embedded.start();
-    expect(embedded.status().firewall).toEqual({ backend: 'iptables-legacy', dockerUser: true });
+    expect(embedded.status().firewall).toEqual({ backend: 'iptables-legacy', dockerUser: true, dockerUser6: true });
     expect(readlinkSync(join(embedded.paths.binDir, 'iptables'))).toBe('/usr/sbin/iptables-legacy');
     await embedded.stop();
   });
