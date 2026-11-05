@@ -4,6 +4,7 @@ import { ApiError } from './api.ts';
 import { authStatusQuery } from './auth.ts';
 import { Toasts } from './components/Toasts.tsx';
 import i18n from './i18n.ts';
+import { AddressesPage } from './pages/AddressesPage.tsx';
 import { AppLayout } from './pages/AppLayout.tsx';
 import { AuditPage } from './pages/admin/AuditPage.tsx';
 import { GeoIpPage } from './pages/admin/GeoIpPage.tsx';
@@ -16,6 +17,7 @@ import { FirewallPage } from './pages/FirewallPage.tsx';
 import { InstancesPage } from './pages/InstancesPage.tsx';
 import { IpPage } from './pages/IpPage.tsx';
 import { JailsPage } from './pages/JailsPage.tsx';
+import { LivePage } from './pages/LivePage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { PreferencesPage } from './pages/PreferencesPage.tsx';
 import { SetupPage } from './pages/SetupPage.tsx';
@@ -88,6 +90,8 @@ const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', 
 const instancesRoute = createRoute({ getParentRoute: () => appRoute, path: '/instances', component: InstancesPage });
 const jailsRoute = createRoute({ getParentRoute: () => appRoute, path: '/jails', component: JailsPage });
 const statsRoute = createRoute({ getParentRoute: () => appRoute, path: '/stats', component: StatsPage });
+const addressesRoute = createRoute({ getParentRoute: () => appRoute, path: '/addresses', component: AddressesPage });
+const liveRoute = createRoute({ getParentRoute: () => appRoute, path: '/live', component: LivePage });
 const firewallRoute = createRoute({ getParentRoute: () => appRoute, path: '/firewall', component: FirewallPage });
 const blocklistsRoute = createRoute({ getParentRoute: () => appRoute, path: '/blocklists', component: BlocklistsPage });
 const ipRoute = createRoute({ getParentRoute: () => appRoute, path: '/hosts/$hostId/ips/$ip', component: IpPage });
@@ -124,6 +128,8 @@ const routeTree = rootRoute.addChildren([
     instancesRoute,
     jailsRoute,
     statsRoute,
+    addressesRoute,
+    liveRoute,
     firewallRoute,
     blocklistsRoute,
     ipRoute,

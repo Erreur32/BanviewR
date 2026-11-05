@@ -29,7 +29,9 @@
       "act": "Act",
       "configure": "Configure",
       "admin": "Administration"
-    }
+    },
+    "addresses": "Addresses",
+    "live": "Live"
   },
   "roles": {
     "admin": "Admin",
@@ -529,5 +531,49 @@
     "urlHint": "Plain text, one address or network per line. Comments and IPv6 entries are ignored.",
     "add": "Add (off)",
     "added": "{{name}} added, turn it on to load it"
+  },
+  "addresses": {
+    "title": "Addresses",
+    "intro": "Addresses that come back: banned at least twice in the period, ranked by level. Click an address for its full page.",
+    "window": "Period",
+    "windows": {
+      "day": "24 h",
+      "week": "7 days",
+      "month": "30 days"
+    },
+    "search": "Filter",
+    "searchHint": "Address, country, operator or jail",
+    "open": "Open the page of {{ip}}",
+    "all": "All",
+    "level": "Level",
+    "jails": "Jails",
+    "first": "First ban",
+    "last": "Last ban",
+    "now": "Now",
+    "bannedNow": "banned",
+    "free": "free",
+    "empty": "No address came back in this period.",
+    "noMatch": "No address matches the filter.",
+    "capped": "Only the {{count}} addresses that came back most are listed."
+  },
+  "live": {
+    "title": "Live",
+    "intro": "Bans as they happen: running bans are read from fail2ban every 5 seconds, the local history every 15 seconds.",
+    "running": "Updating",
+    "paused": "Paused",
+    "pause": "Pause",
+    "resume": "Resume",
+    "bannedNow": "Banned now",
+    "lastHour": "Bans in the last hour",
+    "lastBan": "Last ban",
+    "perMinute": "Bans per minute, last hour",
+    "feed": "Ban feed",
+    "feedHint": "The latest 100, new ones since the page opened highlighted.",
+    "empty": "No ban yet.",
+    "when": "Time",
+    "state": "State",
+    "active": "running",
+    "ended": "ended",
+    "new": "new"
   }
 }

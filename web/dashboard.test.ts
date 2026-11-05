@@ -9,6 +9,7 @@ const threat = (bans: number, jails = ['sshd']): ThreatRow => ({
   ip: `203.0.113.${bans}`,
   bans,
   jails,
+  firstBanAt: '2026-11-05T10:00:00Z',
   lastBanAt: '2026-11-05T14:00:00Z',
   geo: null,
 });

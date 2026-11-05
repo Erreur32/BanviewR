@@ -13,6 +13,8 @@ const NAV_GROUPS = [
     items: [
       { to: '/', label: 'nav.dashboard' },
       { to: '/stats', label: 'nav.stats' },
+      { to: '/addresses', label: 'nav.addresses' },
+      { to: '/live', label: 'nav.live' },
     ],
   },
   {

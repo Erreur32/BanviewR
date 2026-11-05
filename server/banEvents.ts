@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, lt, max, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lt, max, min, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { BanStats } from '../shared/fail2ban.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
@@ -152,8 +152,15 @@ export function readThreats(db: Db, hostId: number, hours: number, locate: Locat
   const since = Math.floor(Date.now() / 1000) - hours * 3600;
   const bans = count();
   const lastBan = max(banEvents.bannedAt);
+  const firstBan = min(banEvents.bannedAt);
   return db
-    .select({ ip: banEvents.ip, bans, jails: sql<string>`GROUP_CONCAT(DISTINCT ${banEvents.jail})`, lastBan })
+    .select({
+      ip: banEvents.ip,
+      bans,
+      jails: sql<string>`GROUP_CONCAT(DISTINCT ${banEvents.jail})`,
+      firstBan,
+      lastBan,
+    })
     .from(banEvents)
     .where(and(eq(banEvents.hostId, hostId), gte(banEvents.bannedAt, since)))
     .groupBy(banEvents.ip)
@@ -165,6 +172,7 @@ export function readThreats(db: Db, hostId: number, hours: number, locate: Locat
       ip: row.ip,
       bans: row.bans,
       jails: row.jails.split(','),
+      firstBanAt: new Date((row.firstBan ?? 0) * 1000).toISOString(),
       lastBanAt: new Date((row.lastBan ?? 0) * 1000).toISOString(),
       geo: locate(row.ip),
     }));

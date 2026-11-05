@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { purgeBans, readBanStats, syncBans } from './banEvents.ts';
+import { purgeBans, readBanStats, readThreats, syncBans } from './banEvents.ts';
 import type { RawBan } from './connectors/sqliteReader.ts';
 import type { Db } from './db/index.ts';
 import { banEvents, hosts } from './db/schema.ts';
@@ -139,5 +139,26 @@ describe('ban stats', () => {
     const all = readBanStats(db, 1, 0, locate);
     expect(all.countries).toEqual([{ country: 'FR', bans: 3, ips: 2 }]);
     expect(all.topIps[0]?.geo).toEqual({ country: 'FR', asn: null, org: null });
+  });
+});
+
+describe('threats', () => {
+  it('keeps addresses that came back in the window, first and last ban', async () => {
+    await syncBans(
+      db,
+      source([
+        ban('203.0.113.1', NOW - 7200),
+        ban('203.0.113.1', NOW - 60, 'recidive'),
+        ban('203.0.113.2', NOW - 60),
+        ban('203.0.113.3', NOW - 2 * 86400),
+        ban('203.0.113.3', NOW - 60),
+      ]),
+      1,
+    );
+    const threats = readThreats(db, 1, 24, noGeo);
+    expect(threats.map((t) => t.ip)).toEqual(['203.0.113.1']);
+    expect(threats[0]?.jails.sort()).toEqual(['recidive', 'sshd']);
+    expect(threats[0]?.firstBanAt).toBe(new Date((NOW - 7200) * 1000).toISOString());
+    expect(threats[0]?.lastBanAt).toBe(new Date((NOW - 60) * 1000).toISOString());
   });
 });
