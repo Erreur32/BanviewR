@@ -14,6 +14,10 @@ const envSchema = z.object({
   F2B_SOCKET: z.string().min(1).default('/var/run/fail2ban/fail2ban.sock'),
   F2B_DB: z.string().min(1).default('/var/lib/fail2ban/fail2ban.sqlite3'),
   F2B_CONF: z.string().min(1).default('/etc/fail2ban'),
+  // Client command: the dev setup points it at scripts/dev-f2b-client.sh (the dev host has no fail2ban)
+  F2B_CLIENT: z.string().min(1).default('fail2ban-client'),
+  // The embedded fail2ban-server can only start when set, and only inside a container
+  EMBEDDED_ALLOWED: z.stringbool().default(false),
   // Write tools stay hidden from every MCP client unless switched on
   MCP_WRITE: z.stringbool().default(false),
   // Ban history is personal data: days kept, 0 = no limit
@@ -36,6 +40,8 @@ function loadConfig() {
     f2bSocket: env.F2B_SOCKET,
     f2bDb: env.F2B_DB,
     f2bConf: env.F2B_CONF,
+    f2bClient: env.F2B_CLIENT,
+    embeddedAllowed: env.EMBEDDED_ALLOWED,
     mcpWrite: env.MCP_WRITE,
     banHistoryDays: env.BAN_HISTORY_DAYS,
   };

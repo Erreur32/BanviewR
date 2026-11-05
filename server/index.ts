@@ -22,8 +22,14 @@ const webRoot = resolve('dist');
 const app = await buildApp(
   db,
   {
-    connect: localConnector,
+    connect: (host) => localConnector(host, config.f2bClient),
     detection,
+    embedded: {
+      dataDir: config.dataDir,
+      allowed: config.embeddedAllowed,
+      inContainer: existsSync('/.dockerenv'),
+      detect: (ignorePids) => detectLocalFail2ban(config.f2bSocket, { ignorePids }),
+    },
     mcpWrite: config.mcpWrite,
     geo: openGeoIp(join(config.dataDir, 'geoip')),
     webRoot: !config.isDev && existsSync(webRoot) ? webRoot : undefined,
@@ -38,6 +44,8 @@ const app = await buildApp(
 app.log.info(detection, 'Local fail2ban detection');
 startBanSync(app, config.banHistoryDays);
 startBlocklistRefresh(app);
+app.embedded.startWatch();
+void app.embedded.resume();
 
 async function shutdown(signal: string) {
   app.log.info(`${signal} received, shutting down`);

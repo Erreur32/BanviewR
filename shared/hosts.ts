@@ -42,3 +42,24 @@ export const localDetection = z.object({
   reason: z.enum(['socket', 'process', 'service', 'none']),
 });
 export type LocalDetection = z.infer<typeof localDetection>;
+
+// Why the embedded fail2ban cannot start here: outside a container, EMBEDDED_ALLOWED unset,
+// or a host fail2ban found (never both at once)
+export const embeddedBlock = z.enum(['NOT_CONTAINER', 'NOT_ALLOWED', 'HOST_FAIL2BAN']);
+export type EmbeddedBlock = z.infer<typeof embeddedBlock>;
+
+export const embeddedStatus = z.object({
+  blockedBy: embeddedBlock.nullable(),
+  // Started from the UI and not stopped since: it comes back with the container
+  enabled: z.boolean(),
+  running: z.boolean(),
+  pid: z.number().nullable(),
+  startedAt: z.string().nullable(),
+  // Why it last stopped without being asked: it exited, or a host fail2ban appeared
+  stopReason: z.enum(['EXITED', 'HOST_FAIL2BAN']).nullable(),
+  lastError: z.string().nullable(),
+  confDir: z.string(),
+  // The instance row driving it, created on the first start
+  hostId: z.number().nullable(),
+});
+export type EmbeddedStatus = z.infer<typeof embeddedStatus>;

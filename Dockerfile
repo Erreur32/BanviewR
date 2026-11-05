@@ -1,4 +1,5 @@
 # BanviewR, external mode: drives the host's fail2ban through its socket and database.
+# Embedded mode (v0.2, in progress): runs its own fail2ban-server when the host has none.
 # Debian trixie ships fail2ban 1.1, the client must speak the same protocol as the host server.
 
 FROM node:22-trixie AS deps
@@ -15,8 +16,8 @@ COPY . .
 RUN npm run build
 
 FROM node:22-trixie-slim
-# Only fail2ban-client is used, the server is never started in this image.
-# iptables, ipset and nftables only read the host firewall for the audit.
+# External mode uses fail2ban-client only. fail2ban-server runs only in embedded mode, started from
+# the UI when EMBEDDED_ALLOWED=true. iptables, ipset and nftables read the firewall for the audit.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends fail2ban iptables ipset nftables \
   && apt-get clean \

@@ -171,7 +171,7 @@
       "socket": "Le socket fail2ban répond : BanviewR utilise le fail2ban de l'hôte.",
       "process": "Un processus fail2ban-server tourne : BanviewR utilise le fail2ban de l'hôte.",
       "service": "Le service fail2ban est installé : BanviewR utilise le fail2ban de l'hôte.",
-      "none": "Aucun fail2ban trouvé au démarrage du serveur. Le mode embarqué arrivera en v0.2."
+      "none": "Aucun fail2ban trouvé au démarrage du serveur : le fail2ban embarqué peut être démarré ci-dessous."
     },
     "name": "Nom",
     "status": "État",
@@ -193,7 +193,26 @@
     "conflict": "Ce nom ou ce socket est déjà utilisé par une autre instance.",
     "lastInstance": "La dernière instance ne peut pas être retirée.",
     "confPath": "Dossier de configuration",
-    "confHint": "Chemin absolu, par exemple /etc/fail2ban."
+    "confHint": "Chemin absolu, par exemple /etc/fail2ban.",
+    "embedded": {
+      "title": "fail2ban embarqué",
+      "intro": "BanviewR lance lui-même fail2ban, dans son conteneur, quand la machine n'en a pas. Le loopback, les plages privées et les réseaux Docker ne sont jamais bannis. Ajoutez vos jails en fichiers .local dans",
+      "running": "En marche, pid {{pid}}",
+      "stopped": "Arrêté",
+      "start": "Démarrer",
+      "stop": "Arrêter",
+      "startDone": "fail2ban embarqué démarré.",
+      "stopDone": "fail2ban embarqué arrêté.",
+      "blocked": {
+        "NOT_CONTAINER": "Indisponible : BanviewR ne tourne pas dans un conteneur.",
+        "NOT_ALLOWED": "Indisponible : mettez EMBEDDED_ALLOWED=true dans l'environnement du conteneur pour l'autoriser.",
+        "HOST_FAIL2BAN": "Indisponible : un fail2ban est déjà installé sur la machine, BanviewR l'utilise."
+      },
+      "stopReason": {
+        "EXITED": "fail2ban-server s'est arrêté de lui-même.",
+        "HOST_FAIL2BAN": "Arrêté car un fail2ban est apparu sur la machine : jamais les deux à la fois."
+      }
+    }
   },
   "jails": {
     "title": "Jails",

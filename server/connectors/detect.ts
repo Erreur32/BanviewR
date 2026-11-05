@@ -9,7 +9,7 @@ const run = promisify(execFile);
 
 // A socket we may not open still proves fail2ban is there. A stale file refuses
 // the connection and does not count.
-function socketListens(path: string) {
+export function socketListens(path: string) {
   return new Promise<boolean>((resolve) => {
     const socket = connect(path);
     socket.setTimeout(1000, () => {
@@ -24,11 +24,12 @@ function socketListens(path: string) {
   });
 }
 
-async function processRuns(procDir: string) {
+async function processRuns(procDir: string, ignorePids: number[]) {
   const entries = await readdir(procDir).catch(() => []);
   const commands = await Promise.all(
     entries
-      .filter((e) => /^\d+$/.test(e))
+      // ignorePids: the embedded fail2ban-server is BanviewR's own, not a host one
+      .filter((e) => /^\d+$/.test(e) && !ignorePids.includes(Number(e)))
       // Processes can exit between the listing and the read
       .map((pid) => readFile(join(procDir, pid, 'cmdline'), 'latin1').catch(() => '')),
   );
@@ -55,10 +56,10 @@ async function serviceInstalled(systemctl: string) {
 
 export async function detectLocalFail2ban(
   socketPath: string,
-  { procDir = '/proc', systemctl = 'systemctl' } = {},
+  { procDir = '/proc', systemctl = 'systemctl', ignorePids = [] as number[] } = {},
 ): Promise<LocalDetection> {
   if (await socketListens(socketPath)) return { mode: 'external', reason: 'socket' };
-  if (await processRuns(procDir)) return { mode: 'external', reason: 'process' };
+  if (await processRuns(procDir, ignorePids)) return { mode: 'external', reason: 'process' };
   if (await serviceInstalled(systemctl)) return { mode: 'external', reason: 'service' };
   return { mode: 'none', reason: 'none' };
 }
