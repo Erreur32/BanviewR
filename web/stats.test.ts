@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarWeeks, foldSlots } from './stats.ts';
+import { calendarWeeks, filterShares, foldSlots } from './stats.ts';
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 
@@ -68,5 +68,28 @@ describe('jails, week and year', () => {
     const last = weeks.at(-1) ?? [];
     expect(last[3]).toEqual({ date: '2026-11-05', bans: 4 });
     expect(last[4]).toBeNull();
+  });
+});
+
+describe('filterShares', () => {
+  it('adds up jails that share a filter, and falls back to the jail name', () => {
+    const shares = filterShares(
+      [
+        { jail: 'sshd', bans: 10 },
+        { jail: 'sshd-ddos', bans: 4 },
+        { jail: 'manual', bans: 2 },
+        { jail: 'nginx-http-auth', bans: 5 },
+      ],
+      [
+        { name: 'sshd', config: { filter: 'sshd' } },
+        { name: 'sshd-ddos', config: { filter: 'sshd' } },
+        { name: 'nginx-http-auth', config: null },
+      ],
+    );
+    expect(shares).toEqual([
+      { filter: 'sshd', bans: 14 },
+      { filter: 'nginx-http-auth', bans: 5 },
+      { filter: 'manual', bans: 2 },
+    ]);
   });
 });

@@ -66,3 +66,18 @@ export function calendarWeeks(perDay: Map<string, number>, today: string) {
   }
   return weeks;
 }
+
+// Bans per fail2ban filter: jails sharing a filter add up, a jail without a readable config counts
+// under its own name (most jails are named after their filter)
+export function filterShares(
+  topJails: { jail: string; bans: number }[],
+  configs: { name: string; config: { filter: string | null } | null }[],
+) {
+  const filterOf = new Map(configs.map((j) => [j.name, j.config?.filter || j.name]));
+  const totals = new Map<string, number>();
+  for (const { jail, bans } of topJails) {
+    const filter = filterOf.get(jail) ?? jail;
+    totals.set(filter, (totals.get(filter) ?? 0) + bans);
+  }
+  return [...totals].map(([filter, bans]) => ({ filter, bans })).sort((a, b) => b.bans - a.bans);
+}

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.5.0-111827?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.6.0-111827?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
@@ -47,7 +47,7 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 - Statistics: bans over time per jail, share of each jail, when the attacks hit (heatmap, 24 h clock), where they come from (map), a year day by day; every chart can switch format (bars, lines, donut, table...)
 - Addresses: the ones that came back, ranked from low to critical, with first and last ban
 - Live: running bans every 5 seconds, bans per minute over the last hour
-- Jails: list, status, start/stop, configuration
+- Jails: cards with bans now, 24 hour sparkline and settings (or a table), start/stop/reload
 - Bans: current and historical bans, manual ban/unban, address page with local GeoIP
 - Firewall audit: iptables, ipset and nftables rules set by fail2ban
 - Blocklists, notifications (webhook, Discord, Telegram, MQTT), MCP server for AI agents

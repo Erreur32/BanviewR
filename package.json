@@ -1,7 +1,7 @@
 {
   "name": "banviewr",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "predev": "lsof -ti:3025 2>/dev/null | xargs -r kill -9; lsof -ti:5185 2>/dev/null | xargs -r kill -9; true",

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { lazy, type ReactNode, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BanStats } from '../../shared/fail2ban.ts';
+import type { BanStats, JailRow } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
 import {
@@ -23,10 +23,12 @@ import {
 } from '../components/charts.tsx';
 import { HostSwitch } from '../components/HostSwitch.tsx';
 import { CountryLabel, IpOrigin } from '../components/IpOrigin.tsx';
+import { Trend } from '../components/Trend.tsx';
 import { Card, ErrorText, Segmented, SelectField, Table } from '../components/ui.tsx';
+import { previousWindow, trend } from '../dashboard.ts';
 import { errorText } from '../errors.ts';
 import { usePersisted } from '../persisted.ts';
-import { addDays, calendarWeeks, foldSlots, localClock, weekdayOf } from '../stats.ts';
+import { addDays, calendarWeeks, filterShares, foldSlots, localClock, weekdayOf } from '../stats.ts';
 import { IpLink } from './JailsPage.tsx';
 
 const PERIODS = [7, 30, 90, 365, 0];
@@ -386,12 +388,38 @@ function Year({ hostId, days, current }: { hostId: number; days: number; current
   );
 }
 
-function Tile({ label, value }: { label: string; value: number }) {
+function Tile({ label, value, extra }: { label: string; value: number; extra?: ReactNode }) {
   const { i18n } = useTranslation();
   return (
     <Card>
-      <p className="text-2xl font-semibold">{value.toLocaleString(i18n.language)}</p>
+      <p className="flex items-baseline gap-2 text-2xl font-semibold">
+        {value.toLocaleString(i18n.language)} {extra}
+      </p>
       <p className="text-sm text-muted">{label}</p>
+    </Card>
+  );
+}
+
+// Bans per filter of the jails: what kind of attack, when several jails watch the same service
+function AttackTypes({ stats, hostId }: { stats: BanStats; hostId: number }) {
+  const { t, i18n } = useTranslation();
+  // Same query as the Jails page; without fail2ban the jail names stand in for the filters
+  const jails = useQuery({
+    queryKey: ['hosts', hostId, 'jails'],
+    queryFn: () => api.get<{ jails: JailRow[] }>(`/hosts/${hostId}/jails`),
+  });
+  const shares = filterShares(stats.topJails, jails.data?.jails ?? []);
+  if (shares.length === 0) return null;
+  return (
+    <Card title={t('stats.attackTypes')}>
+      <p className="mb-3 text-xs text-muted">{t('stats.attackTypesHint')}</p>
+      <ul className="flex flex-wrap gap-2">
+        {shares.map(({ filter, bans }) => (
+          <li key={filter} className="rounded-md border border-border bg-bg2 px-2 py-1 font-mono text-xs">
+            {filter} <span className="text-muted">{bans.toLocaleString(i18n.language)}</span>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -405,7 +433,18 @@ function HostStats({ hostId }: { hostId: number }) {
     queryFn: () => api.get<{ stats: BanStats }>(`/hosts/${hostId}/stats?days=${days}`),
     refetchInterval: REFRESH_MS,
   });
+  // The window just before, same length, for the trend. shortcut: not for 365 days and more
+  // (two years of hourly slots), add a server count if people want it there
+  const withTrend = days > 0 && days <= 90;
+  const twice = useQuery({
+    queryKey: ['hosts', hostId, 'stats', days * 2],
+    queryFn: () => api.get<{ stats: BanStats }>(`/hosts/${hostId}/stats?days=${days * 2}`),
+    refetchInterval: REFRESH_MS,
+    enabled: withTrend,
+  });
   const data = stats.data?.stats;
+  const now = Math.floor(Date.now() / 1000);
+  const previous = twice.data ? previousWindow(twice.data.stats.slots, now, days * 24) : null;
   const fold = data && foldSlots(data.slots, timezone);
 
   return (
@@ -428,7 +467,11 @@ function HostStats({ hostId }: { hostId: number }) {
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Tile label={t('stats.totalBans')} value={data.totalBans} />
+              <Tile
+                label={previous ? t('stats.totalBansBefore', { count: previous }) : t('stats.totalBans')}
+                value={data.totalBans}
+                extra={previous === null ? undefined : <Trend change={trend(data.totalBans, previous)} />}
+              />
               <Tile label={t('stats.uniqueIps')} value={data.uniqueIps} />
               <Tile label={t('stats.jailsSeen')} value={new Set(data.slots.map((s) => s.jail)).size} />
             </div>
@@ -437,6 +480,7 @@ function HostStats({ hostId }: { hostId: number }) {
               <Share stats={data} />
               <When fold={fold} />
             </div>
+            <AttackTypes stats={data} hostId={hostId} />
             <Where stats={data} />
             <Year hostId={hostId} days={days} current={data} />
             <div className="grid gap-4 lg:grid-cols-2">

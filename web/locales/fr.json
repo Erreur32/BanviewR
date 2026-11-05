@@ -351,7 +351,18 @@
       "start": "Jail {{name}} démarré.",
       "stop": "Jail {{name}} arrêté. Ses bans ne s'appliquent plus et reviendront à son redémarrage.",
       "reload": "Jail {{name}} rechargé."
-    }
+    },
+    "view": "Affichage",
+    "views": {
+      "cards": "Cartes",
+      "table": "Tableau"
+    },
+    "running": "actif",
+    "bannedNow": "bannis maintenant",
+    "bans24h": "bans sur 24 h",
+    "last24h": "24 dernières heures",
+    "filter": "filtre",
+    "sparkCaption": "{{count}} bans de {{name}} sur 24 heures, heure par heure"
   },
   "errors": {
     "VALIDATION": "Données invalides.",
@@ -423,7 +434,11 @@
     "jailsSeen": "Jails touchés",
     "orgs": "Opérateurs réseau les plus bannis",
     "noOrgs": "Aucun opérateur connu : la base ASN locale n'est pas installée (page Géolocalisation).",
-    "map": "Carte des bans"
+    "map": "Carte des bans",
+    "attackTypes": "Types d'attaque (filtre)",
+    "attackTypesHint": "Bans par filtre fail2ban : les jails qui surveillent le même service s'additionnent.",
+    "totalBansBefore_one": "Bans ({{count}} sur la période précédente)",
+    "totalBansBefore_other": "Bans ({{count}} sur la période précédente)"
   },
   "geoip": {
     "title": "Géolocalisation",

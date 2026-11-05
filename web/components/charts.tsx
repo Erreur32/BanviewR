@@ -99,7 +99,7 @@ export function StackedBars({
               type="button"
               key={column.key}
               aria-label={`${column.label}: ${sum(parts.map((p) => p.value))}`}
-              className={`flex h-full min-w-0 flex-1 cursor-default flex-col-reverse gap-px ${active === i ? 'bg-bg2/60' : ''}`}
+              className={`flex h-full min-w-0 flex-1 cursor-default flex-col-reverse items-center gap-px ${active === i ? 'bg-bg2/60' : ''}`}
               onMouseEnter={() => setActive(i)}
               onMouseLeave={() => setActive(null)}
               onFocus={() => setActive(i)}
@@ -108,7 +108,8 @@ export function StackedBars({
               {parts.map((part, j) => (
                 <div
                   key={part.name}
-                  className={j === parts.length - 1 ? 'rounded-t-[3px]' : ''}
+                  // A few days on a wide card would make slabs: the slot stays wide for the pointer, the bar not
+                  className={`w-full max-w-12 ${j === parts.length - 1 ? 'rounded-t-[3px]' : ''}`}
                   style={{ height: `${(part.value / max) * 100}%`, background: part.color }}
                 />
               ))}
