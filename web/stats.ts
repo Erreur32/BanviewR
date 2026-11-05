@@ -1,10 +1,8 @@
-import type { BanStats } from '../shared/fail2ban.ts';
-
 const DAY_MS = 86_400_000;
 
 // Folds hourly UTC slots into the reader's days and hours, days without bans included.
 // shortcut: zones with a half-hour offset are off by 30 minutes, add finer slots if it matters
-export function foldSlots(slots: BanStats['slots'], timezone: string) {
+export function foldSlots(slots: { at: number; bans: number }[], timezone: string) {
   const format = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone === 'browser' ? undefined : timezone,
     year: 'numeric',

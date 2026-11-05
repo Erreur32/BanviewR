@@ -2,8 +2,8 @@
 
 <div align="center">
 
-![BanviewR](https://img.shields.io/badge/BanviewR-0.0.1-111827?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-BOOTSTRAP-374151?style=for-the-badge)
+![BanviewR](https://img.shields.io/badge/BanviewR-0.1.1-111827?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-BETA%2C%20active%20development-d97706?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-111827?style=for-the-badge&logo=react&logoColor=38bdf8)
 ![Fastify](https://img.shields.io/badge/Fastify-5-111827?style=for-the-badge&logo=fastify&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-7-111827?style=for-the-badge&logo=typescript&logoColor=60a5fa)
@@ -11,6 +11,13 @@
 **Web UI for fail2ban: jails, bans, stats, map, firewall audit and MCP server**
 
 </div>
+
+> [!WARNING]
+> ## 🚧 BETA, in active development
+>
+> BanviewR is young and changes fast: features, screens and the API can still change between versions, and bugs are expected.
+> It drives your firewall: try it on a test machine first, keep your own way into the server (console, out-of-band access), and read the [CHANGELOG](CHANGELOG.md) before each upgrade.
+> Feedback and bug reports are welcome in [Issues](https://github.com/Erreur32/BanviewR/issues) and [Discussions](https://github.com/Erreur32/BanviewR/discussions).
 
 ---
 

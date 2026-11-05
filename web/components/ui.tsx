@@ -75,6 +75,36 @@ export function Badge({ tone = 'neutral', children }: { tone?: keyof typeof BADG
   );
 }
 
+// A few exclusive choices side by side: display mode, chart format
+export function Segmented<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset className="inline-flex gap-0.5 rounded-lg border border-border bg-bg1 p-0.5">
+      <legend className="sr-only">{label}</legend>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={option.value === value}
+          onClick={() => onChange(option.value)}
+          className={`rounded-md px-3 py-1.5 text-xs ${option.value === value ? 'bg-bg2 font-semibold text-text' : 'text-muted hover:text-text'}`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
 // Horizontal scroll on small screens, header cells from `columns`
 export function Table({ columns, children }: { columns: ReactNode[]; children: ReactNode }) {
   return (

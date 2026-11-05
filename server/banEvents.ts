@@ -4,7 +4,7 @@ import type { BanStats } from '../shared/fail2ban.ts';
 import type { Fail2banConnector } from './connectors/connector.ts';
 import type { Db } from './db/index.ts';
 import { banEvents, hosts } from './db/schema.ts';
-import { countByCountry, type Locate, located } from './geoip.ts';
+import { countByCountry, countByOrg, type Locate, located } from './geoip.ts';
 import { type NewBan, notifyBans } from './notifications.ts';
 
 const SYNC_MS = 60_000;
@@ -104,6 +104,7 @@ export function readBanStats(db: Db, hostId: number, days: number, locate: Locat
     uniqueIps: ipCounts.length,
     topIps: located(locate, ipCounts.slice(0, TOP)),
     countries: countByCountry(locate, ipCounts),
+    orgs: countByOrg(locate, ipCounts).slice(0, TOP),
     topJails: db
       .select({ jail: banEvents.jail, bans, failures })
       .from(banEvents)
@@ -112,7 +113,13 @@ export function readBanStats(db: Db, hostId: number, days: number, locate: Locat
       .orderBy(desc(bans))
       .limit(TOP)
       .all(),
-    slots: db.select({ at: slot, bans }).from(banEvents).where(inPeriod).groupBy(slot).orderBy(slot).all(),
+    slots: db
+      .select({ at: slot, jail: banEvents.jail, bans })
+      .from(banEvents)
+      .where(inPeriod)
+      .groupBy(slot, banEvents.jail)
+      .orderBy(slot)
+      .all(),
   };
 }
 
