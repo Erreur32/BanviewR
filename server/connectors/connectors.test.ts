@@ -51,19 +51,19 @@ describe('localConnector', () => {
 
   it('reports an unreachable server', async () => {
     const client = script('client', 'echo "Failed to access socket path" >&2; exit 255');
-    const status = await localConnector(
-      { socketPath: '/run/custom.sock', dbPath: '/none', confPath: '/none' },
-      client,
-    ).status();
+    const socketPath = join(dir, 'f2b.sock');
+    writeFileSync(socketPath, '');
+    const status = await localConnector({ socketPath, dbPath: '/none', confPath: '/none' }, client).status();
     expect(status).toEqual({ reachable: false, version: null, error: 'UNREACHABLE' });
   });
 
-  it('reports a missing client', async () => {
-    const status = await localConnector(
-      { socketPath: '/run/custom.sock', dbPath: '/none', confPath: '/none' },
-      join(dir, 'nope'),
-    ).status();
-    expect(status).toEqual({ reachable: false, version: null, error: 'CLIENT_MISSING' });
+  it('reports a missing client, and a missing socket first', async () => {
+    const socketPath = join(dir, 'f2b.sock');
+    const at = (path: string) =>
+      localConnector({ socketPath: path, dbPath: '/none', confPath: '/none' }, join(dir, 'nope')).status();
+    expect(await at('/run/custom.sock')).toEqual({ reachable: false, version: null, error: 'NO_SOCKET' });
+    writeFileSync(socketPath, '');
+    expect(await at(socketPath)).toEqual({ reachable: false, version: null, error: 'CLIENT_MISSING' });
   });
 });
 

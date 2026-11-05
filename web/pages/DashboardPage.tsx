@@ -7,18 +7,7 @@ import type { BanStats, JailRow, LocatedBan, ThreatRow } from '../../shared/fail
 import type { HostRow } from '../../shared/hosts.ts';
 import { api } from '../api.ts';
 import { useCurrentUser, useFormatDateTime } from '../auth.ts';
-import {
-  BarAxis,
-  BarList,
-  Donut,
-  jailColors,
-  Legend,
-  Ring,
-  Spark,
-  StackedBars,
-  Swatch,
-  sum,
-} from '../components/charts.tsx';
+import { BarAxis, BarList, Donut, Legend, Ring, Spark, StackedBars, Swatch, sum } from '../components/charts.tsx';
 import { HostSwitch } from '../components/HostSwitch.tsx';
 import { CountryLabel, IpOrigin } from '../components/IpOrigin.tsx';
 import { Trend } from '../components/Trend.tsx';
@@ -37,6 +26,7 @@ import {
 } from '../dashboard.ts';
 import { errorText } from '../errors.ts';
 import { hostsQuery } from '../hosts.ts';
+import { useJailColors } from '../jailColors.ts';
 import { usePersisted } from '../persisted.ts';
 import { bansKey, formatDuration, IpLink } from './JailsPage.tsx';
 
@@ -59,6 +49,7 @@ function HostBadge({ host }: { host: HostRow }) {
   const { t } = useTranslation();
   const { status } = host;
   if (status.reachable) return <Badge tone="ok">{t('dashboard.connected', { version: status.version ?? '?' })}</Badge>;
+  if (status.error === 'NO_SOCKET') return <Badge>{t('dashboard.historyOnly')}</Badge>;
   return (
     <Badge tone="danger">{t(status.error === 'CLIENT_MISSING' ? 'dashboard.clientMissing' : 'dashboard.down')}</Badge>
   );
@@ -86,10 +77,18 @@ function useHostData(hostId: number, full: boolean) {
   const history = useQuery(options<{ bans: LocatedBan[] }>(['history', 8], '/history?limit=8', full));
 
   const stats = day.data?.stats;
-  const jailNames = [...(stats?.topJails.map((j) => j.jail) ?? []), ...(jails.data?.jails.map((j) => j.name) ?? [])];
+  const colorOf = useJailColors([
+    ...(stats?.topJails.map((j) => j.jail) ?? []),
+    ...(jails.data?.jails.map((j) => j.name) ?? []),
+  ]);
   const now = Math.floor(Date.now() / 1000);
   const current = stats?.totalBans ?? 0;
-  const previous = previousWindow(fortnight.data?.stats.slots ?? [], now, HOURS);
+  const previous = previousWindow(
+    fortnight.data?.stats.slots ?? [],
+    now,
+    HOURS,
+    fortnight.data?.stats.firstBanAt ?? null,
+  );
   const threatList = threats.data?.threats ?? [];
   return {
     error: day.error ?? fortnight.error ?? threats.error,
@@ -99,7 +98,7 @@ function useHostData(hostId: number, full: boolean) {
     active: active.data?.bans,
     jails: jails.data?.jails,
     history: history.data?.bans,
-    colorOf: jailColors(jailNames),
+    colorOf,
     now,
     current,
     previous,
@@ -352,7 +351,8 @@ function SimpleDashboard({ host, data }: { host: HostRow; data: HostData }) {
   );
   const week = days(7, 'var(--color-text)');
   const maxBanned = Math.max(1, ...running.map((j) => j.currentlyBanned));
-  const word = verdict(data.levels, data.current, data.previous);
+  // Without an earlier window to compare, nothing is "rising"
+  const word = verdict(data.levels, data.current, data.previous ?? data.current);
   const n = (value: number | undefined) => (value === undefined ? '-' : value.toLocaleString(i18n.language));
 
   return (

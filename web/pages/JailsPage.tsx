@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import type { BanStats, JailAction, JailRow, LocatedBan } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser, useFormatDateTime } from '../auth.ts';
-import { jailColors } from '../components/charts.tsx';
 import { HostSwitch } from '../components/HostSwitch.tsx';
 import { IpOrigin } from '../components/IpOrigin.tsx';
 import {
@@ -22,6 +21,7 @@ import {
 } from '../components/ui.tsx';
 import { hourColumns } from '../dashboard.ts';
 import { conflictText, errorText } from '../errors.ts';
+import { useJailColors } from '../jailColors.ts';
 import { usePersisted } from '../persisted.ts';
 import { notify } from '../stores/notificationStore.ts';
 
@@ -328,8 +328,7 @@ function HostJails({ hostId, canWrite }: { hostId: number; canWrite: boolean }) 
   });
   const running = jails.data?.jails.filter((j) => j.running) ?? [];
   const list = jails.data?.jails ?? [];
-  // Same order as the dashboard, so a jail keeps its colour from page to page
-  const colors = jailColors([...(day.data?.stats.topJails.map((j) => j.jail) ?? []), ...list.map((j) => j.name)]);
+  const colors = useJailColors(list.map((j) => j.name));
   const columns = hourColumns(day.data?.stats.slots ?? [], {
     now: Math.floor(Date.now() / 1000),
     hours: 24,

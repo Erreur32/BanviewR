@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import type { LocatedBan } from '../../shared/fail2ban.ts';
 import { api } from '../api.ts';
 import { useCurrentUser, useFormatDateTime } from '../auth.ts';
-import { BarAxis, jailColors, Legend, StackedBars, Swatch } from '../components/charts.tsx';
+import { BarAxis, Legend, StackedBars, Swatch } from '../components/charts.tsx';
 import { HostSwitch } from '../components/HostSwitch.tsx';
 import { IpOrigin } from '../components/IpOrigin.tsx';
 import { Button, Card, ErrorText, Table } from '../components/ui.tsx';
 import { errorText } from '../errors.ts';
+import { useJailColors } from '../jailColors.ts';
 import { banKey, mergeFeed, minuteColumns } from '../live.ts';
 import { bansKey, formatDuration, IpLink } from './JailsPage.tsx';
 
@@ -36,7 +37,7 @@ function HostLive({ hostId }: { hostId: number }) {
     refetchInterval: paused ? false : HISTORY_MS,
   });
   const feed = mergeFeed(active.data?.bans ?? [], history.data?.bans ?? []).slice(0, FEED);
-  const colorOf = jailColors(feed.map((b) => b.jail));
+  const colorOf = useJailColors(feed.map((b) => b.jail));
   const minute = new Intl.DateTimeFormat(i18n.language, {
     timeZone: timezone === 'browser' ? undefined : timezone,
     hour: '2-digit',

@@ -49,9 +49,13 @@ describe('dashboard figures', () => {
       { at: hour - 30 * H, jail: 'sshd', bans: 5 },
       { at: hour - 2 * H, jail: 'sshd', bans: 9 },
     ];
-    expect(previousWindow(slots, NOW, 24)).toBe(5);
+    expect(previousWindow(slots, NOW, 24, hour - 48 * H)).toBe(5);
     expect(trend(9, 5)).toBe(80);
     expect(trend(3, 0)).toBeNull();
+    // History starting inside the previous window: no comparison rather than a huge rise
+    expect(previousWindow(slots, NOW, 24, hour - 30 * H)).toBeNull();
+    expect(previousWindow(slots, NOW, 24, null)).toBeNull();
+    expect(trend(9, null)).toBeNull();
   });
 
   it('ranks addresses by how often they came back', () => {

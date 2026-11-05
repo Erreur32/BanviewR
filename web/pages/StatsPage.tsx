@@ -12,7 +12,6 @@ import {
   CellGrid,
   Clock,
   Donut,
-  jailColors,
   Legend,
   LineChart,
   OTHER_COLOR,
@@ -27,16 +26,17 @@ import { Trend } from '../components/Trend.tsx';
 import { Card, ErrorText, Segmented, SelectField, Table } from '../components/ui.tsx';
 import { previousWindow, trend } from '../dashboard.ts';
 import { errorText } from '../errors.ts';
+import { useJailColors } from '../jailColors.ts';
 import { usePersisted } from '../persisted.ts';
 import { addDays, calendarWeeks, filterShares, foldSlots, localClock, weekdayOf } from '../stats.ts';
 import { IpLink } from './JailsPage.tsx';
 
 const PERIODS = [7, 30, 90, 365, 0];
-const YEAR = 365;
 // Past this many days, one column per week: daily columns would be thinner than a pixel
 const WEEKLY_AFTER = 120;
 // The server syncs fail2ban once a minute
 const REFRESH_MS = 60_000;
+const YEAR = 365;
 // Its outlines weigh about 40 KB compressed, only fetched when the map format is shown
 const WorldMap = lazy(() => import('../components/WorldMap.tsx'));
 
@@ -98,7 +98,7 @@ function useLabels() {
 // Jails past the palette share one gray series, named "other jails"
 function useSeries(stats: BanStats) {
   const { t } = useTranslation();
-  const colorOf = jailColors(stats.slots.map((s) => s.jail));
+  const colorOf = useJailColors(stats.slots.map((s) => s.jail));
   const nameOf = (jail: string) => (colorOf(jail) === OTHER_COLOR ? t('stats.otherJails') : jail);
   const totals = new Map<string, { color: string; value: number }>();
   for (const row of stats.topJails) {
@@ -444,7 +444,9 @@ function HostStats({ hostId }: { hostId: number }) {
   });
   const data = stats.data?.stats;
   const now = Math.floor(Date.now() / 1000);
-  const previous = twice.data ? previousWindow(twice.data.stats.slots, now, days * 24) : null;
+  const previous = twice.data
+    ? previousWindow(twice.data.stats.slots, now, days * 24, twice.data.stats.firstBanAt)
+    : undefined;
   const fold = data && foldSlots(data.slots, timezone);
 
   return (
@@ -470,7 +472,7 @@ function HostStats({ hostId }: { hostId: number }) {
               <Tile
                 label={previous ? t('stats.totalBansBefore', { count: previous }) : t('stats.totalBans')}
                 value={data.totalBans}
-                extra={previous === null ? undefined : <Trend change={trend(data.totalBans, previous)} />}
+                extra={previous === undefined ? undefined : <Trend change={trend(data.totalBans, previous)} />}
               />
               <Tile label={t('stats.uniqueIps')} value={data.uniqueIps} />
               <Tile label={t('stats.jailsSeen')} value={new Set(data.slots.map((s) => s.jail)).size} />

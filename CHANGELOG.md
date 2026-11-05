@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-05
+
+### Fixed
+
+- Trends (dashboard and Statistics) no longer compare with a window the history does not cover: a new instance, or one whose fail2ban had purged its older bans, showed rises like +59733 %. They now say there is no comparison.
+- Jail colours go to the busiest jails of the last year, whatever their names, and stay the same on every page. Custom jails such as `npm-4xx` were gray while smaller stock jails took the colours. The palette has six colours instead of four.
+- An instance with no socket at its path (a copy of a fail2ban database read on its own) shows "history only, no socket" in a neutral badge instead of a red "fail2ban-client missing".
+
+### API
+
+- `/api/hosts/:hostId/stats` gains `firstBanAt` (oldest ban kept) and `slots=false` to leave out the hourly slots. The status error `NO_SOCKET` is new.
+
 ## [0.7.0] - 2026-11-05
 
 ### For users
