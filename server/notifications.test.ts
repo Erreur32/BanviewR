@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { webhooks } from './db/schema.ts';
 import { noGeo } from './geoip.ts';
-import { notifyAction, notifyBans } from './notifications.ts';
+import { notifyAction, notifyBans, notifyEmbeddedStop } from './notifications.ts';
 import { buildTestApp, pw } from './test-utils.ts';
 
 const ORIGIN = { host: 'bvr.test', origin: 'http://bvr.test' };
@@ -101,6 +101,14 @@ describe('notification sending', () => {
     notifyAction(app.db, caller, { hostId: 1, action: 'unban', target: '203.0.113.9', jail: 'sshd' });
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(sentBodies()[0].content).toBe('BanviewR local: alice unban 203.0.113.9 in sshd');
+  });
+
+  it('tells the action destinations when a host fail2ban stopped the embedded one', async () => {
+    add({ onActions: false, onBans: true });
+    add({ kind: 'generic', target: 'https://hooks.example/x', onActions: true, onBans: false });
+    notifyEmbeddedStop(app.db, { mode: 'external', reason: 'socket' });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(sentBodies()[0]).toEqual({ event: 'embedded', state: 'stopped', reason: 'HOST_FAIL2BAN', found: 'socket' });
   });
 
   it('sends nothing for a catch-up import', async () => {

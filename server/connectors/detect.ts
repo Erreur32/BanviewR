@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, realpath } from 'node:fs/promises';
 import { connect } from 'node:net';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import type { LocalDetection } from '../../shared/hosts.ts';
 
@@ -43,6 +43,18 @@ async function processRuns(procDir: string, ignorePids: number[]) {
   );
 }
 
+// In a container, the host's socket folder is a bind mount. The host's systemd removes that folder when
+// fail2ban stops (RuntimeDirectory) and makes a new one on start, which the container no longer sees:
+// mountinfo then shows the mount root as "//deleted". Only a host fail2ban does that, so it counts as one.
+export async function socketMountGone(socketPath: string, procDir = '/proc') {
+  const dir = await realpath(dirname(socketPath)).catch(() => dirname(socketPath));
+  const info = await readFile(join(procDir, 'self', 'mountinfo'), 'utf8').catch(() => '');
+  return info.split('\n').some((line) => {
+    const [, , , root, mountPoint] = line.split(' ');
+    return mountPoint === dir && root?.endsWith('//deleted');
+  });
+}
+
 // LoadState, not is-active: a stopped service is still an installed fail2ban,
 // and is-active answers 'inactive' for a unit that does not exist
 async function serviceInstalled(systemctl: string) {
@@ -59,6 +71,7 @@ export async function detectLocalFail2ban(
   { procDir = '/proc', systemctl = 'systemctl', ignorePids = [] as number[] } = {},
 ): Promise<LocalDetection> {
   if (await socketListens(socketPath)) return { mode: 'external', reason: 'socket' };
+  if (await socketMountGone(socketPath, procDir)) return { mode: 'external', reason: 'mount' };
   if (await processRuns(procDir, ignorePids)) return { mode: 'external', reason: 'process' };
   if (await serviceInstalled(systemctl)) return { mode: 'external', reason: 'service' };
   return { mode: 'none', reason: 'none' };

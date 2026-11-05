@@ -54,7 +54,7 @@ export function parseJailStatus(name: string, output: string): JailStatus {
 }
 
 // Read-only dumps. Missing tool or no permission (not root, no NET_ADMIN in Docker) gives null.
-async function dump(cmd: string, args: string[] = []) {
+export async function dump(cmd: string, args: string[] = []) {
   try {
     return (await run(cmd, args, { timeout: TIMEOUT_MS, maxBuffer: MAX_OUTPUT })).stdout;
   } catch {

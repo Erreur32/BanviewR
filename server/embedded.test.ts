@@ -1,4 +1,13 @@
-import { chmodSync, existsSync, lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -10,6 +19,9 @@ import {
   type EmbeddedOptions,
   embeddedBlock,
   embeddedPaths,
+  keepIgnoreip,
+  parseIgnoreList,
+  pickFirewall,
   writeBaseConfig,
 } from './embedded.ts';
 import { fakeServer, fakeStock } from './test-utils.ts';
@@ -93,10 +105,86 @@ describe('writeBaseConfig', () => {
     expect(existsSync(join(paths.confDir, 'jail.d', 'mine.local'))).toBe(true);
   });
 
+  it('writes the backend and the DOCKER-USER action in a .conf the admin can override', () => {
+    const paths = embeddedPaths(join(dir, 'data'));
+    const conf = () => readFileSync(join(paths.confDir, 'jail.d', '00-banviewr.conf'), 'utf8');
+    writeBaseConfig(paths, { stockDir: fakeStock(dir), ignoreip: BASE_IGNOREIP });
+    expect(conf()).not.toContain('action');
+
+    writeBaseConfig(paths, {
+      stockDir: fakeStock(dir),
+      ignoreip: BASE_IGNOREIP,
+      firewall: { backend: 'iptables-nft', dockerUser: true },
+    });
+    expect(conf()).toContain('chain="DOCKER-USER"');
+    expect(conf()).toMatch(/^action = %\(action_\)s\n\s+%\(action_docker\)s$/m);
+    expect(conf()).not.toContain('banaction');
+
+    writeBaseConfig(paths, {
+      stockDir: fakeStock(dir),
+      ignoreip: BASE_IGNOREIP,
+      firewall: { backend: 'nftables', dockerUser: false },
+    });
+    expect(conf()).toContain('banaction = nftables\n');
+    expect(conf()).not.toContain('DOCKER-USER');
+  });
+
   it('escapes % for fail2ban interpolation', () => {
     const paths = embeddedPaths(join(dir, '100%'));
     writeBaseConfig(paths, { stockDir: fakeStock(dir), ignoreip: BASE_IGNOREIP });
     expect(readFileSync(join(paths.confDir, 'fail2ban.local'), 'utf8')).toContain('100%%');
+  });
+});
+
+describe('pickFirewall', () => {
+  const docker = '*filter\n:INPUT ACCEPT [0:0]\n:DOCKER-USER - [0:0]\n-A FORWARD -j DOCKER-USER\nCOMMIT\n';
+  const emptyNft = '*filter\n:INPUT ACCEPT [0:0]\nCOMMIT\n';
+
+  it("follows Docker's iptables backend and finds DOCKER-USER", () => {
+    expect(pickFirewall({ legacy: null, nft: docker, nftTables: 'table ip filter\n' })).toEqual({
+      backend: 'iptables-nft',
+      dockerUser: true,
+    });
+    expect(pickFirewall({ legacy: docker, nft: emptyNft, nftTables: 'table ip filter\n' })).toEqual({
+      backend: 'iptables-legacy',
+      dockerUser: true,
+    });
+  });
+
+  it('keeps a legacy firewall with rules, else nftables when only nft tables exist', () => {
+    const legacy = '*filter\n:INPUT ACCEPT [0:0]\n-A INPUT -p tcp --dport 22 -j ACCEPT\nCOMMIT\n';
+    expect(pickFirewall({ legacy, nft: null, nftTables: '' }).backend).toBe('iptables-legacy');
+    expect(pickFirewall({ legacy: null, nft: '', nftTables: 'table inet filter\n' }).backend).toBe('nftables');
+    expect(pickFirewall({ legacy: null, nft: emptyNft, nftTables: 'table ip filter\n' }).backend).toBe('iptables-nft');
+    // Nothing anywhere: the stock iptables actions
+    expect(pickFirewall({ legacy: null, nft: null, nftTables: null })).toEqual({
+      backend: 'iptables-nft',
+      dockerUser: false,
+    });
+  });
+});
+
+describe('ignoreip of jails', () => {
+  it('reads the list fail2ban prints', () => {
+    const out = 'These IP addresses/networks are ignored:\n|- 127.0.0.0/8\n|- ::1\n`- 203.0.113.7\n';
+    expect(parseIgnoreList(out)).toEqual(['127.0.0.0/8', '::1', '203.0.113.7']);
+    expect(parseIgnoreList('No IP address/network is ignored\n')).toEqual([]);
+  });
+
+  it('adds the base ranges back to a jail that set its own list, and only to it', async () => {
+    const calls: string[] = [];
+    const client = async (args: string[]) => {
+      calls.push(args.join(' '));
+      if (args[0] === 'status') return 'Status\n|- Number of jail:\t2\n`- Jail list:\tsshd, own\n';
+      if (args[2] === 'ignoreip' && args[1] === 'own')
+        return 'These IP addresses/networks are ignored:\n`- 198.51.100.9\n';
+      if (args[2] === 'ignoreip')
+        return `These IP addresses/networks are ignored:\n${BASE_IGNOREIP.map((ip) => `|- ${ip}`).join('\n')}\n`;
+      return '';
+    };
+    const added = await keepIgnoreip(client, BASE_IGNOREIP);
+    expect(added).toEqual(BASE_IGNOREIP.map((ip) => `own ${ip}`));
+    expect(calls.filter((c) => c.startsWith('set'))).toEqual(BASE_IGNOREIP.map((ip) => `set own addignoreip ${ip}`));
   });
 });
 
@@ -117,6 +205,8 @@ describe('embedded supervisor', () => {
       serverBin: fakeServer(dir),
       stockDir: fakeStock(dir),
       readyTimeoutMs: 5000,
+      client: async () => '',
+      onHostStop: (d) => stops.push(d),
       detection: NONE,
       store: {
         enabled: () => enabled,
@@ -129,8 +219,10 @@ describe('embedded supervisor', () => {
     });
   }
 
+  let stops: LocalDetection[];
   beforeEach(() => {
     enabled = false;
+    stops = [];
   });
 
   it('refuses to start outside a container, without EMBEDDED_ALLOWED or next to a host fail2ban', async () => {
@@ -192,6 +284,19 @@ describe('embedded supervisor', () => {
       stopReason: 'HOST_FAIL2BAN',
       blockedBy: 'HOST_FAIL2BAN',
     });
+    expect(stops).toEqual([HOST]);
+    // Told once, not on every later check
+    await embedded.check();
+    expect(stops).toHaveLength(1);
+  });
+
+  it('shows the firewall it found and gives the server legacy iptables first in its PATH', async () => {
+    const embedded = supervisor({ firewall: async () => ({ backend: 'iptables-legacy', dockerUser: true }) });
+    expect(embedded.status().firewall).toBeNull();
+    await embedded.start();
+    expect(embedded.status().firewall).toEqual({ backend: 'iptables-legacy', dockerUser: true });
+    expect(readlinkSync(join(embedded.paths.binDir, 'iptables'))).toBe('/usr/sbin/iptables-legacy');
+    await embedded.stop();
   });
 
   it('does not resume next to a host fail2ban, and stays off', async () => {

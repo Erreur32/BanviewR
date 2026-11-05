@@ -1,0 +1,32 @@
+# Embedded mode: for a machine WITHOUT fail2ban. BanviewR runs its own fail2ban-server, started once
+# from the Instances page, and it bans in the host firewall (and in Docker's DOCKER-USER chain).
+#   docker compose -f docker-compose.embedded.yml up -d
+# Host network: the bans must land in the host's firewall, and BanviewR sees the real client addresses.
+# It listens on 127.0.0.1 only; put a reverse proxy with HTTPS in front to reach it from elsewhere.
+services:
+  banviewr:
+    image: ghcr.io/erreur32/banviewr:latest
+    build: .
+    container_name: banviewr
+    network_mode: host
+    restart: unless-stopped
+    # Firewall changes (iptables, ipset, nftables) need both
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      HOST: 127.0.0.1
+      PORT: 3025
+      # The lock: without it the embedded fail2ban never starts
+      EMBEDDED_ALLOWED: "true"
+    volumes:
+      # BanviewR's database, and the embedded fail2ban in data/fail2ban/ (your jails go in etc/jail.d/)
+      - ./data:/data
+      # Logs the jails read, read-only. /var/log/journal is in there for jails with backend = systemd.
+      - /var/log:/var/log:ro
+      # The journal reader looks for the host's journal by machine id; local time for syslog dates
+      - /etc/machine-id:/etc/machine-id:ro
+      - /etc/localtime:/etc/localtime:ro
+      # Never both at once: a host fail2ban opens its socket here, BanviewR then stops its own.
+      # Docker creates this empty folder on the host when it does not exist.
+      - /var/run/fail2ban:/var/run/fail2ban:ro

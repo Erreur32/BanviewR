@@ -54,7 +54,7 @@ BanviewR is extracted from [LogviewR](https://github.com/Erreur32/LogviewR) v0.1
 ## Roadmap
 
 - **v0.1, extraction:** port the fail2ban part of LogviewR, external mode (host fail2ban through its socket and `fail2ban.sqlite3`)
-- **v0.2, embedded mode:** the container runs `fail2ban-server` itself when no host socket is found. In progress: start, stop and status from the Instances page, behind the `EMBEDDED_ALLOWED` lock; host firewall and `DOCKER-USER` support come next
+- **v0.2, embedded mode:** the container runs `fail2ban-server` itself when no host socket is found. Start, stop and status from the Instances page behind the `EMBEDDED_ALLOWED` lock, host firewall backend detection, `DOCKER-USER` for published container ports (see [Embedded mode](#embedded-mode))
 - **Later, multi-host:** one UI driving several hosts
 
 ## Stack
@@ -84,6 +84,47 @@ Then open `http://127.0.0.1:3025` on that machine and create the first admin acc
 The container runs as root, because fail2ban's socket is root-only. Without `EMBEDDED_ALLOWED=true` it never starts a fail2ban server of its own.
 
 The firewall audit reads the host firewall (`iptables-save`, `ipset list`, `nft list ruleset`), which needs the `NET_ADMIN` capability set in `docker-compose.yml`. That capability would also let the container change the host firewall; access to fail2ban's socket already allows as much, since fail2ban runs its actions as root. Blocklists use the same capability to write their ipset and iptables DROP rule on the host. Remove `cap_add` to drop the audit and blocklists, the rest keeps working.
+
+## Embedded mode
+
+For a machine **without** fail2ban: BanviewR runs its own `fail2ban-server` inside its container and bans in the host firewall. Never use it next to a host fail2ban (their firewall rules would clash): BanviewR refuses to start it when it finds one, and stops it if one shows up.
+
+```bash
+docker compose -f docker-compose.embedded.yml up -d
+```
+
+Then open `http://127.0.0.1:3025`, create the first admin and start the embedded fail2ban from the Instances page (it never starts on its own the first time; once started it comes back with the container). What the compose file sets, and why:
+
+| Setting                                  | Why                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `network_mode: host`                     | bans must land in the host firewall, and BanviewR sees the real client addresses                 |
+| `cap_add: NET_ADMIN, NET_RAW`            | fail2ban's actions change the firewall                                                           |
+| `EMBEDDED_ALLOWED=true`                  | the lock: without it the embedded fail2ban never starts (and never outside a container)          |
+| `./data:/data`                           | BanviewR's database, and the embedded fail2ban's config, socket and database in `data/fail2ban/` |
+| `/var/log:/var/log:ro`                   | logs the jails read, the systemd journal (`/var/log/journal`) included                           |
+| `/etc/machine-id`, `/etc/localtime` (ro) | the journal reader finds the host's journal, syslog dates read in local time                     |
+| `/var/run/fail2ban:/var/run/fail2ban:ro` | a host fail2ban that appears opens its socket there: BanviewR then stops its own                 |
+
+**Jails.** Put them in `data/fail2ban/etc/jail.d/*.local`, then restart the embedded fail2ban from the Instances page. The stock `jail.conf`, filters and actions come from the image. No jail is enabled by default: Debian's `defaults-debian.conf` is not used. On Debian 12 and later, sshd logs to the journal only:
+
+```ini
+[sshd]
+enabled = true
+backend = systemd
+journalmatch = _SYSTEMD_UNIT=ssh.service + _COMM=sshd
+```
+
+A volatile journal (`/run/log/journal`, no `/var/log/journal` folder) is not mounted: add `/run/log/journal:/run/log/journal:ro` if the host has no persistent journal.
+
+**Never banned.** Loopback, private and link-local ranges, CGNAT (Tailscale) and the Docker bridge networks up at start are written to `ignoreip` in `jail.d/00-banviewr.local`. A jail that sets its own `ignoreip` replaces that list in fail2ban: BanviewR adds the missing ranges back to every running jail on start and every minute (`fail2ban-client set <jail> addignoreip`), so a jail started or reloaded later runs up to a minute on its own list.
+
+**Firewall backend.** On each start BanviewR checks which firewall the host uses, from where Docker's rules are: iptables with the nf_tables backend (`iptables-nft`, Debian's default), `iptables-legacy`, or nftables alone. The embedded fail2ban then writes to the same one (its iptables commands call `iptables-legacy` on a legacy host; `banaction = nftables` on a pure nftables host). The Instances page shows what was found.
+
+**Published container ports.** Traffic to a published Docker port goes through `FORWARD`, not `INPUT`, so a ban in `INPUT` alone does not stop it. When Docker's `DOCKER-USER` chain exists, every jail gets a second action, `iptables-allports` on `DOCKER-USER` (chain `f2b-<jail>-du`), on all ports: after Docker's DNAT the port seen there is the container's, not the published one. Both are fail2ban's own actions, set in `jail.d/00-banviewr.conf`, which your `jail.local` or `jail.d/*.local` can override. A jail with its own `action =` list adds `%(action_docker)s` to keep it. No other chain is touched.
+
+**Host fail2ban detection.** Inside the container BanviewR sees the host's fail2ban through its socket only (the process and systemd checks cannot see the host). A host fail2ban that starts later is found within a minute; the embedded one stops, stays off, and a notification goes to the destinations that send manual actions. The host's systemd removes and recreates `/run/fail2ban` when its fail2ban stops and starts, which the container's mount no longer follows: BanviewR treats that replaced folder as a host fail2ban too. After removing a host fail2ban, restart the container to check again. A host fail2ban that is installed but never started is not seen.
+
+Limits: IPv6 bans reach `DOCKER-USER` only when Docker manages ip6tables (otherwise that action fails for IPv6 bans, the `INPUT` ban still applies). Docker's own nftables firewall backend has no `DOCKER-USER` chain.
 
 ## Development
 

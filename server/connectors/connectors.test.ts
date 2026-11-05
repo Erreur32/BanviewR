@@ -125,6 +125,23 @@ describe('detectLocalFail2ban', () => {
     });
   });
 
+  it('counts a host socket folder replaced since the container started', async () => {
+    const procDir = fakeProc({});
+    mkdirSync(join(procDir, 'self'));
+    const mount = (root: string) =>
+      `404 389 0:25 ${root} /run/fail2ban ro,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755\n`;
+    const opts = { procDir, systemctl: noService() };
+    writeFileSync(join(procDir, 'self', 'mountinfo'), mount('/fail2ban'));
+    expect(await detectLocalFail2ban('/run/fail2ban/fail2ban.sock', opts)).toMatchObject({ reason: 'none' });
+    writeFileSync(join(procDir, 'self', 'mountinfo'), mount('/fail2ban//deleted'));
+    expect(await detectLocalFail2ban('/run/fail2ban/fail2ban.sock', opts)).toEqual({
+      mode: 'external',
+      reason: 'mount',
+    });
+    // Another folder going away says nothing about fail2ban
+    expect(await detectLocalFail2ban(join(dir, 'x', 'f2b.sock'), opts)).toMatchObject({ reason: 'none' });
+  });
+
   it('survives a machine without systemd', async () => {
     const opts = { procDir: fakeProc({}), systemctl: join(dir, 'nope') };
     expect(await detectLocalFail2ban(join(dir, 'x'), opts)).toMatchObject({ reason: 'none' });

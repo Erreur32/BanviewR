@@ -11,6 +11,7 @@ import type { Db } from './db/index.ts';
 import { createEmbedded, type Embedded, type EmbeddedOptions, settingsStore } from './embedded.ts';
 import { registerErrorHandling } from './errors.ts';
 import type { GeoIp } from './geoip.ts';
+import { notifyEmbeddedStop } from './notifications.ts';
 import { registerOpenApi } from './openapi.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
@@ -54,7 +55,13 @@ export async function buildApp(db: Db, deps: AppDeps, opts: FastifyServerOptions
   app.decorate('geo', deps.geo);
   app.decorate(
     'embedded',
-    createEmbedded({ ...deps.embedded, detection: deps.detection, store: settingsStore(db), log: app.log }),
+    createEmbedded({
+      ...deps.embedded,
+      detection: deps.detection,
+      store: settingsStore(db),
+      log: app.log,
+      onHostStop: (found) => notifyEmbeddedStop(db, found),
+    }),
   );
   app.addHook('onClose', async () => {
     // Kept enabled: it comes back with the next start

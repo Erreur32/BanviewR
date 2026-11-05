@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Embedded fail2ban, first part of v0.2: when the machine has no fail2ban, an admin can start one inside the BanviewR container from the Instances page, and stop it. It comes back with the container once started, and stops for good when a host fail2ban shows up (never both at once). Its configuration and database live in `DATA_DIR/fail2ban/`, with loopback, private ranges and Docker networks always in `ignoreip`.
 - Locked by default: it only starts inside a container and with `EMBEDDED_ALLOWED=true`.
+- `docker-compose.embedded.yml` for embedded mode on a real host: host network, `NET_ADMIN` and `NET_RAW`, host logs and journal mounted read-only, the host's fail2ban socket folder mounted read-only to detect a host fail2ban. New README section "Embedded mode".
+- The embedded fail2ban uses the host's firewall backend (iptables-nft, iptables-legacy or nftables), found on each start and shown on the Instances page.
+- Bans also reach published container ports: when Docker's `DOCKER-USER` chain exists, every jail gets a second fail2ban action, `iptables-allports` on `DOCKER-USER`.
+- A jail that sets its own `ignoreip` keeps the base ranges: they are added back on start and every minute.
+- A host fail2ban that appears while the embedded one runs now sends a notification (to the destinations that send manual actions). A host socket folder replaced since the container started counts as a host fail2ban.
 - Dashboard with two modes, switched at the top of the page and remembered in the browser. Simple: a few big figures, latest alerts, bans per day over 7 days, health rings, worst addresses, jails, and a one-word summary. Full: six figures with the trend against the 24 hours before, a threat band (addresses by how often they came back), bans per hour stacked by jail, share per jail, bans per day over 14 days, instances, top addresses, countries and network operators, latest bans.
 - Each jail keeps the same color everywhere (sshd and recidive always first), checked for contrast and color blindness.
 - Menu in four groups (Monitor, Act, Configure, Administration). The instance is chosen once in the sidebar and stays the same from page to page.
@@ -22,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `GET /api/embedded`, `POST /api/embedded/start` and `POST /api/embedded/stop`: signed-in admins only (API tokens refused), rate limited, audited.
 - `F2B_CLIENT` sets the fail2ban client command.
+- `GET /api/embedded` returns `firewall` (`backend`, `dockerUser`), `null` before the first start. Host detection gains the reason `mount`. Notification event `embedded` (`state: stopped`, `reason: HOST_FAIL2BAN`, `found`).
 - `/api/hosts/:hostId/stats`: `slots` are now split per jail (`{ at, jail, bans }`), and a new `orgs` list counts bans per network operator.
 - Hand-written chart pieces in `web/components/charts.tsx` (stacked bars with tooltip, donut, ring, bar list, sparkline) and a `Segmented` switch in `web/components/ui.tsx`.
 - More chart pieces: `LineChart`, `ShareBar`, `CellGrid` (heatmap and calendar), `Clock`; one sequential ramp shared with the world map. `usePersisted` (`web/persisted.ts`) remembers a choice per browser.
