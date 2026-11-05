@@ -1,58 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api.ts';
 import { useCurrentUser } from '../auth.ts';
 import { Avatar } from '../components/Avatar.tsx';
+import { CommandPalette } from '../components/CommandPalette.tsx';
 import { HostPicker } from '../components/HostSwitch.tsx';
-import { type IconName, NavIcon } from '../components/NavIcon.tsx';
+import { NavIcon } from '../components/NavIcon.tsx';
 import { ReauthDialog } from '../components/ReauthDialog.tsx';
 import { Logo } from '../components/ui.tsx';
+import { NAV_GROUPS, navItems } from '../nav.ts';
+import { type NavBadge, useNavBadges } from '../navBadges.ts';
 import { usePersisted } from '../persisted.ts';
-
-// Menu groups of the validated mockup (style C, folding of D, rail E); adminOnly groups and items
-// are hidden from the other roles
-const NAV_GROUPS = [
-  {
-    id: 'watch',
-    items: [
-      { to: '/', label: 'nav.dashboard', icon: 'dashboard' },
-      { to: '/stats', label: 'nav.stats', icon: 'stats' },
-      { to: '/addresses', label: 'nav.addresses', icon: 'addresses' },
-      { to: '/live', label: 'nav.live', icon: 'live' },
-    ],
-  },
-  {
-    id: 'act',
-    items: [
-      { to: '/jails', label: 'nav.jails', icon: 'jails' },
-      { to: '/firewall', label: 'nav.firewall', icon: 'firewall' },
-      { to: '/blocklists', label: 'nav.blocklists', icon: 'blocklists' },
-    ],
-  },
-  {
-    id: 'configure',
-    items: [
-      { to: '/instances', label: 'nav.instances', icon: 'instances' },
-      { to: '/admin/notifications', label: 'nav.notifications', icon: 'notifications', adminOnly: true },
-      { to: '/preferences', label: 'nav.preferences', icon: 'preferences' },
-    ],
-  },
-  {
-    id: 'admin',
-    adminOnly: true,
-    items: [
-      { to: '/admin/users', label: 'nav.users', icon: 'users' },
-      { to: '/admin/tokens', label: 'nav.tokens', icon: 'tokens' },
-      { to: '/admin/audit', label: 'nav.audit', icon: 'audit' },
-      { to: '/admin/geoip', label: 'nav.geoip', icon: 'geoip' },
-    ],
-  },
-] as const satisfies {
-  id: string;
-  adminOnly?: boolean;
-  items: { to: string; label: string; icon: IconName; adminOnly?: boolean }[];
-}[];
 
 type NavGroupDef = (typeof NAV_GROUPS)[number];
 
@@ -63,13 +23,49 @@ const linkClass =
   'flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-muted hover:bg-bg2 hover:text-text';
 const iconButton = 'rounded-md p-1.5 text-muted hover:bg-bg2 hover:text-text';
 
-function NavGroup({ group, rail, isAdmin }: { group: NavGroupDef; rail: boolean; isAdmin: boolean }) {
+const BADGE_TONE: Record<NavBadge['tone'], string> = {
+  danger: 'bg-danger/15 text-[#ffa198]',
+  warn: 'bg-[#bb800926] text-[#e3b341]',
+  ok: 'bg-ok',
+};
+const DOT_TONE: Record<NavBadge['tone'], string> = { danger: 'bg-danger', warn: 'bg-[#d29922]', ok: 'bg-ok' };
+
+// A count in a pill, or a dot when there is nothing to count (and always in the rail)
+function Badge({ badge, rail }: { badge: NavBadge; rail: boolean }) {
+  if (rail || badge.count === undefined) {
+    return (
+      <span
+        aria-hidden="true"
+        className={`size-1.5 shrink-0 rounded-full ${DOT_TONE[badge.tone]} ${rail ? 'md:absolute md:top-1.5 md:right-2.5' : 'ml-auto'}`}
+      />
+    );
+  }
+  return (
+    <span className={`ml-auto rounded-full px-1.5 text-[11px] leading-[18px] ${BADGE_TONE[badge.tone]}`}>
+      {badge.count}
+    </span>
+  );
+}
+
+function NavGroup({
+  group,
+  rail,
+  isAdmin,
+  badges,
+}: {
+  group: NavGroupDef;
+  rail: boolean;
+  isAdmin: boolean;
+  badges: Record<string, NavBadge | undefined>;
+}) {
   const { t } = useTranslation();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [fold, setFold] = usePersisted(`bvr.nav.${group.id}`, FOLDS, group.id === 'admin' ? 'shut' : 'open');
   const items = group.items.filter((item) => isAdmin || !('adminOnly' in item));
   // The group of the page on screen stays open, and the rail always shows every icon
   const shut = fold === 'shut' && !rail && !items.some((item) => item.to === path);
+  // A folded group takes the colour of what waits inside
+  const waiting = items.map((item) => badges[item.to]).find(Boolean);
 
   return (
     <div
@@ -84,7 +80,13 @@ function NavGroup({ group, rail, isAdmin }: { group: NavGroupDef; rail: boolean;
         >
           {t(`nav.groups.${group.id}`)}
           <span className="flex items-center gap-1.5">
-            {shut && <span className="rounded-full bg-bg2 px-1.5 text-[11px] leading-[18px]">{items.length}</span>}
+            {shut && (
+              <span
+                className={`rounded-full px-1.5 text-[11px] leading-[18px] ${waiting ? BADGE_TONE[waiting.tone === 'ok' ? 'warn' : waiting.tone] : 'bg-bg2'}`}
+              >
+                {items.length}
+              </span>
+            )}
             <NavIcon name="chevron" size={14} className={`transition-transform ${shut ? '-rotate-90' : ''}`} />
           </span>
         </button>
@@ -96,11 +98,12 @@ function NavGroup({ group, rail, isAdmin }: { group: NavGroupDef; rail: boolean;
             to={item.to}
             title={rail ? t(item.label) : undefined}
             activeOptions={{ exact: true }}
-            className={`${linkClass} ${rail ? 'md:justify-center md:px-0' : ''}`}
+            className={`${linkClass} relative ${rail ? 'md:justify-center md:px-0' : ''}`}
             activeProps={{ className: 'bg-bg2 font-medium text-text' }}
           >
             <NavIcon name={item.icon} />
             <span className={rail ? 'md:sr-only' : ''}>{t(item.label)}</span>
+            {badges[item.to] && <Badge badge={badges[item.to] as NavBadge} rail={rail} />}
           </Link>
         ))}
       </div>
@@ -162,6 +165,8 @@ export function AppLayout() {
   const isAdmin = useCurrentUser().role === 'admin';
   const [size, setSize] = usePersisted('bvr.nav.size', SIZES, 'full');
   const rail = size === 'rail';
+  const badges = useNavBadges();
+  const [searching, setSearching] = useState(false);
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -176,12 +181,22 @@ export function AppLayout() {
         <div className={rail ? 'md:hidden' : ''}>
           <HostPicker />
         </div>
+        <button
+          type="button"
+          onClick={() => setSearching(true)}
+          title={t('search.title')}
+          className={`mx-3 mb-3 hidden items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs text-muted hover:text-text md:flex ${rail ? 'md:mx-2 md:justify-center md:px-0' : ''}`}
+        >
+          <NavIcon name="search" size={14} />
+          <span className={rail ? 'md:sr-only' : 'flex-1 text-left'}>{t('search.button')}</span>
+          {!rail && <kbd className="rounded border border-border px-1 font-mono text-[11px]">Ctrl K</kbd>}
+        </button>
         <nav
           aria-label={t('nav.menu')}
           className={`flex gap-1 overflow-x-auto px-3 pb-3 md:flex-1 md:flex-col md:gap-3 md:overflow-y-auto ${rail ? 'md:px-2' : ''}`}
         >
           {NAV_GROUPS.filter((group) => isAdmin || !('adminOnly' in group)).map((group) => (
-            <NavGroup key={group.id} group={group} rail={rail} isAdmin={isAdmin} />
+            <NavGroup key={group.id} group={group} rail={rail} isAdmin={isAdmin} badges={badges} />
           ))}
           {/* Served by the API server, outside the SPA router */}
           <a
@@ -202,6 +217,7 @@ export function AppLayout() {
         <Outlet />
       </main>
       <ReauthDialog />
+      <CommandPalette items={navItems(isAdmin)} open={searching} setOpen={setSearching} />
     </div>
   );
 }

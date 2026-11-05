@@ -13,7 +13,7 @@ const useChosenHost = create<{ chosen: number | null; choose: (id: number) => vo
   choose: (chosen) => set({ chosen }),
 }));
 
-function useHost() {
+export function useHost() {
   const hosts = useQuery(hostsQuery);
   const { chosen, choose } = useChosenHost();
   const list = hosts.data?.hosts ?? [];

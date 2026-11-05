@@ -613,5 +613,12 @@
     "title": "Confirmez votre mot de passe",
     "intro": "Cette action touche aux comptes ou aux jetons. Votre mot de passe reste valable 10 minutes pour les actions suivantes.",
     "submit": "Confirmer"
+  },
+  "search": {
+    "title": "Aller à une page",
+    "button": "Aller à…",
+    "placeholder": "Une page, ou une adresse IP",
+    "openIp": "Ouvrir l'adresse {{ip}}",
+    "none": "Rien ne correspond."
   }
 }

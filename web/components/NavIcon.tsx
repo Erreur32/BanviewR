@@ -64,6 +64,12 @@ const PATHS = {
   ),
   apiDocs: <path d="M8 6l-6 6 6 6M16 6l6 6-6 6" />,
   chevron: <path d="M6 9l6 6 6-6" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-4-4" />
+    </>
+  ),
   logout: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
   collapse: <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />,
   expand: <path d="M13 17l5-5-5-5M6 17l5-5-5-5" />,
