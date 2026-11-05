@@ -21,6 +21,7 @@ import {
 } from '../components/charts.tsx';
 import { HostSwitch } from '../components/HostSwitch.tsx';
 import { CountryLabel, IpOrigin } from '../components/IpOrigin.tsx';
+import { Trend } from '../components/Trend.tsx';
 import { Badge, ErrorText, Segmented } from '../components/ui.tsx';
 import {
   dayColumns,
@@ -127,18 +128,6 @@ function Panel({
       </div>
       {children}
     </section>
-  );
-}
-
-function Trend({ change }: { change: number | null }) {
-  const { t } = useTranslation();
-  if (change === null) return <span className="text-xs text-muted">{t('dashboard.noTrend')}</span>;
-  // More bans means more attacks: up is the warning direction
-  const tone = change > 0 ? 'text-[#f0883e]' : change < 0 ? 'text-ok' : 'text-muted';
-  return (
-    <span className={`text-xs font-semibold ${tone}`}>
-      {change > 0 ? '▲' : change < 0 ? '▼' : '='} {Math.abs(change)} %
-    </span>
   );
 }
 

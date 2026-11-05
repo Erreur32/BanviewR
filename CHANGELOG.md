@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-05
+
+### For users
+
+- Jails page: cards from the mockup, the default view (the table stays one click away, remembered per browser). Each card shows the colour of the jail, bans now and over 24 hours, an hourly sparkline, maxretry, findtime, bantime and filter, and the reload, stop or start buttons.
+- Statistics: the bans tile shows the change against the previous period of the same length (7, 30 and 90 days), and a new "Attack types (filter)" card adds up the bans of jails that share a fail2ban filter.
+- Bar charts keep their bars at most 48 px wide, so a few days on a wide card no longer draw slabs.
+
 ## [0.5.0] - 2026-11-05
 
 ### For users
